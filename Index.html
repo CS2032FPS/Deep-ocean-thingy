@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deeeep.io Clone - Final Step (Mythic Tiers & Abilities)</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+            background-color: #87CEEB; font-family: 'Segoe UI', sans-serif; user-select: none;
+        }
+        canvas { display: block; }
+        
+        #ui-container {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 400px; text-align: center; color: white; pointer-events: none; z-index: 10;
+        }
+        #hud-info {
+            font-size: 20px; font-weight: bold; margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8); display: flex; justify-content: space-between;
+        }
+        .bar-bg {
+            width: 100%; height: 16px; background: rgba(0, 0, 0, 0.6);
+            border: 2px solid white; border-radius: 8px; margin-bottom: 5px;
+            overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.5); position: relative;
+        }
+        .bar-fill { width: 100%; height: 100%; transition: width 0.1s linear; }
+        #xp-bar-fill { background: #9d00ff; width: 0%; }
+        #health-bar-fill { background: #ff3333; }
+        #boost-bar-fill { background: #ffaa00; }
+        .bar-text {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            font-size: 12px; line-height: 16px; text-align: center; text-shadow: 1px 1px 2px black;
+        }
+
+        .screen-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8); z-index: 20; flex-direction: column;
+            justify-content: center; align-items: center; color: white;
+        }
+        h1 { font-size: 48px; margin-bottom: 10px; text-align: center; }
+        p { font-size: 24px; margin-bottom: 30px; text-align: center; }
+        
+        #evo-options { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; max-width: 800px; }
+        .evo-card {
+            background: #222; border: 3px solid #fff; border-radius: 10px; padding: 20px;
+            text-align: center; cursor: pointer; transition: 0.2s; width: 150px;
+        }
+        .evo-card:hover { transform: scale(1.1); background: #444; border-color: #9d00ff; }
+        
+        button.play-btn {
+            padding: 15px 30px; font-size: 20px; font-weight: bold; color: white;
+            background: #0096ff; border: 2px solid white; border-radius: 10px; cursor: pointer; transition: 0.2s;
+        }
+        button.play-btn:hover { background: #007acc; transform: scale(1.05); }
+
+        /* Status Effects Indicator Overlay */
+        #status-overlay {
+            position: fixed; top: 20%; left: 50%; transform: translateX(-50%); pointer-events: none;
+            color: #ff3333; font-weight: bold; font-size: 24px; text-shadow: 1px 1px 2px black; opacity: 0; transition: opacity 0.2s;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    <div id="status-overlay">POISONED!</div>
+    
+    <div id="ui-container">
+        <div id="hud-info">
+            <span id="player-animal">Fish (Tier 1)</span>
+            <span>XP: <span id="xp-display">0</span></span>
+        </div>
+        <div class="bar-bg">
+            <div id="xp-bar-fill" class="bar-fill"></div>
+            <div class="bar-text" id="xp-text">0 / 500</div>
+        </div>
+        <div class="bar-bg">
+            <div id="health-bar-fill" class="bar-fill"></div>
+            <div class="bar-text">HP</div>
+        </div>
+        <div class="bar-bg">
+            <div id="boost-bar-fill" class="bar-fill"></div>
+            <div class="bar-text">BOOST</div>
+        </div>
+    </div>
+
+    <div id="evo-screen" class="screen-overlay">
+        <h1 style="color: #9d00ff;">EVOLUTION!</h1>
+        <p>Choose your next form:</p>
+        <div id="evo-options"></div>
+    </div>
+
+    <div id="game-over-screen" class="screen-overlay">
+        <h1 style="color: #ff4444;">GAME OVER</h1>
+        <p>Final XP: <span id="final-xp">0</span><br>Reached: <span id="final-animal">Fish</span></p>
+        <button class="play-btn" id="restart-btn">Play Again</button>
+    </div>
+
+    <script>
+        // --- CONSTANTS ---
+        const M = 1000000;
+        const B = 1000000000;
+        const T = 1000000000000;
+        
+        const WORLD_WIDTH = 30000;
+        const WORLD_HEIGHT = 20000;
+        const WATER_LEVEL = 2000;
+        const DEEP_LEVEL = 8000;
+
+        // --- ANIMAL DICTIONARY ---
+        const ANIMALS = {
+            // Tiers 1-8
+            "Fish": { tier: 1, size: 30, color: "#ff6b6b", shape: "rect", nextXP: 500, evos: ["Jellyfish", "School of Fish", "Pufferfish"] },
+            "Jellyfish": { tier: 2, size: 40, color: "rgba(255,105,180,0.8)", shape: "jelly", nextXP: 2500, evos: ["Small Shark", "Swordfish", "Anglerfish"] },
+            "School of Fish": { tier: 2, size: 45, color: "#87CEFA", shape: "pod-3", nextXP: 2500, evos: ["Small Shark", "Swordfish", "Anglerfish"] },
+            "Pufferfish": { tier: 2, size: 45, color: "#FFD700", shape: "circle-spike", nextXP: 2500, evos: ["Small Shark", "Swordfish", "Anglerfish"] },
+            "Small Shark": { tier: 3, size: 55, color: "#A9A9A9", shape: "rect", nextXP: 10000, evos: ["Medium Shark", "Sawfish", "Octopus"] },
+            "Swordfish": { tier: 3, size: 50, color: "#4682B4", shape: "sword", nextXP: 10000, evos: ["Medium Shark", "Sawfish", "Octopus"] },
+            "Anglerfish": { tier: 3, size: 50, color: "#2F4F4F", shape: "angler", nextXP: 10000, evos: ["Medium Shark", "Sawfish", "Octopus"] },
+            "Medium Shark": { tier: 4, size: 70, color: "#808080", shape: "rect", nextXP: 45000, evos: ["Big Shark", "Giant Squid", "Orca"] },
+            "Sawfish": { tier: 4, size: 65, color: "#8B4513", shape: "saw", nextXP: 45000, evos: ["Big Shark", "Giant Squid", "Orca"] },
+            "Octopus": { tier: 4, size: 60, color: "#800080", shape: "octo", nextXP: 45000, evos: ["Big Shark", "Giant Squid", "Orca"] },
+            "Big Shark": { tier: 5, size: 90, color: "#696969", shape: "rect", nextXP: 150000, evos: ["Sperm Whale", "Beluga Whale", "Dolphin Pod"] },
+            "Giant Squid": { tier: 5, size: 85, color: "#DC143C", shape: "octo", nextXP: 150000, evos: ["Sperm Whale", "Beluga Whale", "Dolphin Pod"] },
+            "Orca": { tier: 5, size: 95, color: "#000000", shape: "orca", nextXP: 150000, evos: ["Sperm Whale", "Beluga Whale", "Dolphin Pod"] },
+            "Sperm Whale": { tier: 6, size: 120, color: "#708090", shape: "rect", nextXP: 500000, evos: ["Humpback Whale", "Fin Whale"] },
+            "Beluga Whale": { tier: 6, size: 110, color: "#FFFFFF", shape: "rect", nextXP: 500000, evos: ["Humpback Whale", "Fin Whale"] },
+            "Dolphin Pod": { tier: 6, size: 100, color: "#ADD8E6", shape: "pod-5", nextXP: 500000, evos: ["Humpback Whale", "Fin Whale"] },
+            "Humpback Whale": { tier: 7, size: 160, color: "#2F4F4F", shape: "rect", nextXP: 1500000, evos: ["Oarfish", "Blue Whale"] },
+            "Fin Whale": { tier: 7, size: 150, color: "#556B2F", shape: "rect", nextXP: 1500000, evos: ["Oarfish", "Blue Whale"] },
+            "Oarfish": { tier: 8, size: 180, color: "#C0C0C0", shape: "long-rect", nextXP: 25 * M, evos: ["Siren"] },
+            "Blue Whale": { tier: 8, size: 220, color: "#4169E1", shape: "rect", nextXP: 25 * M, evos: ["Siren"] },
+            
+            // Mythic Tiers (9-20)
+            "Siren": { tier: 9, size: 280, color: "#FF69B4", shape: "circle", nextXP: 150 * M, evos: ["Scylla"] },
+            "Scylla": { tier: 10, size: 340, color: "#8B0000", shape: "octo", nextXP: 750 * M, evos: ["Hydra"] },
+            "Hydra": { tier: 11, size: 420, color: "#006400", shape: "pod-5", nextXP: 3 * B, evos: ["Kraken"] },
+            "Kraken": { tier: 12, size: 500, color: "#4B0082", shape: "octo", nextXP: 15 * B, evos: ["Ningen"] },
+            "Ningen": { tier: 13, size: 600, color: "#F0F8FF", shape: "rect", nextXP: 85 * B, evos: ["Sea Serpent"] },
+            "Sea Serpent": { tier: 14, size: 700, color: "#20B2AA", shape: "long-rect", nextXP: 500 * B, evos: ["Lusca"] },
+            "Lusca": { tier: 15, size: 820, color: "#800000", shape: "octo", nextXP: 2.5 * T, evos: ["Cthulhu"] },
+            "Cthulhu": { tier: 16, size: 950, color: "#00FA9A", shape: "octo", nextXP: 15 * T, evos: ["Leviathan"] },
+            "Leviathan": { tier: 17, size: 1100, color: "#00008B", shape: "long-rect", nextXP: 100 * T, evos: ["Aspidochelone"] },
+            "Aspidochelone": { tier: 18, size: 1300, color: "#556B2F", shape: "circle", nextXP: 750 * T, evos: ["The Bloop"] },
+            "The Bloop": { tier: 19, size: 1500, color: "#191970", shape: "circle", nextXP: 9999 * T, evos: ["Jörmungandr"] },
+            "Jörmungandr": { tier: 20, size: 1800, color: "#2F4F4F", shape: "long-rect", nextXP: null, evos: [] }
+        };
+
+        const ANIMAL_NAMES = Object.keys(ANIMALS);
+
+        // --- FORMATTING UTILS ---
+        function formatXP(num) {
+            if (num >= T) return (num / T).toFixed(1) + 'T';
+            if (num >= B) return (num / B).toFixed(1) + 'B';
+            if (num >= M) return (num / M).toFixed(1) + 'M';
+            return num.toLocaleString();
+        }
+
+        class Vector2 { constructor(x=0,y=0) { this.x=x; this.y=y; } }
+
+        class Camera {
+            constructor() { this.x = WORLD_WIDTH/2; this.y = WATER_LEVEL; this.zoom = 1; }
+            follow(target, lerp = 0.1) {
+                this.x += (target.x - this.x) * lerp;
+                this.y += (target.y - this.y) * lerp;
+                
+                let targetZoom = 35 / target.size;
+                targetZoom = Math.max(0.02, Math.min(targetZoom, 1.2)); // Allow massive zoom out
+                this.zoom += (targetZoom - this.zoom) * 0.05;
+
+                this.x = Math.max(0, Math.min(this.x, WORLD_WIDTH));
+                this.y = Math.max(0, Math.min(this.y, WORLD_HEIGHT));
+            }
+            apply(ctx, canvas) {
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.scale(this.zoom, this.zoom);
+                ctx.translate(-this.x, -this.y);
+            }
+            release(ctx) { ctx.restore(); }
+        }
+
+        class InkCloud {
+            constructor(x, y, radius) {
+                this.x = x; this.y = y; this.radius = radius;
+                this.life = 200; // frames
+            }
+            draw(ctx) {
+                let alpha = this.life / 200;
+                ctx.fillStyle = `rgba(0,0,0,${alpha * 0.8})`;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        class Terrain {
+            constructor(x, y, w, h, type = "solid") {
+                this.x = x; this.y = y; this.w = w; this.h = h; this.type = type;
+            }
+            draw(ctx) {
+                if (this.y < WATER_LEVEL) ctx.fillStyle = '#2d8a4e';
+                else if (this.y > DEEP_LEVEL) ctx.fillStyle = '#3a2e25';
+                else ctx.fillStyle = '#c2b280';
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+            }
+        }
+
+        class Food {
+            constructor(x, y, isMeat = false, xpValue = 10, radius = 5) {
+                this.x = x; this.y = y; this.isMeat = isMeat; this.active = true;
+                this.xpValue = xpValue;
+                this.radius = radius;
+                this.healValue = isMeat ? (xpValue * 0.05) : 2;
+                this.color = isMeat ? '#ff4d4d' : `hsl(${Math.random() * 360}, 100%, 60%)`;
+            }
+            draw(ctx) {
+                if (!this.active) return;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color; ctx.fill(); ctx.closePath();
+            }
+        }
+
+        class Entity {
+            constructor(x, y, animalName) {
+                this.x = x; this.y = y; this.vx = 0; this.vy = 0; this.angle = 0;
+                this.bumpCooldown = 0; this.isDead = false;
+                this.poisonTicks = 0; this.isBoostingFrames = 0;
+                this.history = []; // For Jörmungandr
+                this.setAnimal(animalName);
+            }
+
+            setAnimal(animalName) {
+                this.animalName = animalName;
+                const stats = ANIMALS[animalName];
+                this.tier = stats.tier; this.size = stats.size;
+                this.color = stats.color; this.shape = stats.shape;
+                
+                this.maxHp = this.size * 5 * this.tier;
+                this.hp = this.maxHp;
+                this.damage = this.size * 0.6 * this.tier;
+                
+                this.accel = 0.8 - Math.min(0.6, (this.size * 0.0003)); 
+                this.friction = 0.92; this.gravity = 0.4; this.airFriction = 0.99;
+                this.history = [];
+            }
+
+            applyPhysics(gameManager) {
+                if (this.bumpCooldown > 0) this.bumpCooldown--;
+                if (this.isBoostingFrames > 0) this.isBoostingFrames--;
+                
+                // Status Effects: Poison
+                if (this.poisonTicks > 0) {
+                    this.poisonTicks--;
+                    if (this.poisonTicks % 30 === 0) this.hp -= (this.maxHp * 0.02);
+                }
+
+                // Status Effects: Ink Slowing
+                let inInk = false;
+                if (gameManager) {
+                    for(let ink of gameManager.inks) {
+                        if (Math.hypot(this.x - ink.x, this.y - ink.y) < ink.radius + this.size/2) inInk = true;
+                    }
+                }
+
+                let inWater = this.y > WATER_LEVEL;
+                
+                if (inWater) {
+                    this.vx *= inInk ? 0.8 : this.friction; 
+                    this.vy *= inInk ? 0.8 : this.friction;
+                } else {
+                    this.vy += this.gravity;
+                    this.vx *= this.airFriction; this.vy *= this.airFriction;
+                }
+                
+                // Aspidochelone unique: Locked to surface (cannot go deeper than 1000px below water level)
+                if (this.animalName === 'Aspidochelone') {
+                    if (this.y > WATER_LEVEL + 1000) {
+                        this.y = WATER_LEVEL + 1000;
+                        if (this.vy > 0) this.vy = 0;
+                    }
+                }
+
+                this.x += this.vx; this.y += this.vy;
+
+                // Bounds
+                if (this.x < 0) { this.x = 0; this.vx *= -0.5; }
+                if (this.x > WORLD_WIDTH) { this.x = WORLD_WIDTH; this.vx *= -0.5; }
+                if (this.y < 0) { this.y = 0; this.vy *= -0.5; }
+                if (this.y > WORLD_HEIGHT) { this.y = WORLD_HEIGHT; this.vy *= -0.5; }
+
+                // Jörmungandr segments tracker
+                if (this.animalName === 'Jörmungandr') {
+                    this.history.unshift({x: this.x, y: this.y, angle: this.angle});
+                    if (this.history.length > 300) this.history.pop();
+                }
+            }
+
+            handleCollisions(terrainList) {
+                let colRadius = this.size / 2;
+                for (let t of terrainList) {
+                    let testX = Math.max(t.x, Math.min(this.x, t.x + t.w));
+                    let testY = Math.max(t.y, Math.min(this.y, t.y + t.h));
+                    let d = Math.sqrt((this.x - testX)**2 + (this.y - testY)**2);
+
+                    if (d <= colRadius) {
+                        let overlap = colRadius - d;
+                        if (d === 0) { this.y -= 1; }
+                        else {
+                            let nx = (this.x - testX) / d, ny = (this.y - testY) / d;
+                            this.x += nx * overlap; this.y += ny * overlap;
+                            let dp = (this.vx * nx) + (this.vy * ny);
+                            if (dp < 0) { this.vx -= dp * nx; this.vy -= dp * ny; }
+                        }
+                    }
+                }
+            }
+
+            drawShape(ctx, hs) {
+                let isAngler = this.animalName === 'Anglerfish';
+                let isDeep = this.y > DEEP_LEVEL;
+
+                if (isAngler && isDeep) ctx.globalAlpha = 0.15; // Anglerfish stealth
+                
+                ctx.fillStyle = this.poisonTicks > 0 ? '#b3ffb3' : this.color;
+                ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2;
+
+                switch(this.shape) {
+                    case "circle":
+                    case "circle-spike":
+                        ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                        if(this.shape === "circle-spike") {
+                            for(let i=0; i<8; i++) {
+                                ctx.rotate(Math.PI/4);
+                                ctx.beginPath(); ctx.moveTo(hs, -5); ctx.lineTo(hs+10, 0); ctx.lineTo(hs, 5); ctx.fill();
+                            }
+                        }
+                        break;
+                    case "jelly":
+                        ctx.beginPath(); ctx.arc(0, 0, hs, Math.PI, Math.PI*2); ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(-hs+5, 0); ctx.lineTo(-hs+5, hs); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, hs); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(hs-5, 0); ctx.lineTo(hs-5, hs); ctx.stroke();
+                        break;
+                    case "sword":
+                        ctx.fillRect(-hs, -hs, this.size, this.size); ctx.strokeRect(-hs, -hs, this.size, this.size);
+                        ctx.fillStyle = '#bbb';
+                        ctx.beginPath(); ctx.moveTo(hs, -10); ctx.lineTo(hs+this.size, 0); ctx.lineTo(hs, 10); ctx.fill(); ctx.stroke();
+                        break;
+                    case "angler":
+                        ctx.fillRect(-hs, -hs, this.size, this.size); ctx.strokeRect(-hs, -hs, this.size, this.size);
+                        ctx.beginPath(); ctx.moveTo(0, -hs); ctx.quadraticCurveTo(hs, -hs-20, hs+20, -5); ctx.stroke();
+                        break;
+                    case "octo":
+                        ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                        for(let i=0; i<4; i++) {
+                            ctx.fillRect(hs-15, hs-10 + (i*8) - 15, 20, 6);
+                            ctx.fillRect(-hs-5, hs-10 + (i*8) - 15, 20, 6);
+                        }
+                        break;
+                    case "orca":
+                        ctx.fillRect(-hs, -hs/1.5, this.size, this.size/1.5);
+                        ctx.fillStyle = 'white'; ctx.fillRect(0, -hs/1.5 + 5, 10, 10); ctx.fillRect(-hs+5, 0, 15, 5);
+                        break;
+                    case "long-rect":
+                        ctx.fillRect(-hs*1.5, -hs/2, this.size*1.5, this.size/2); ctx.strokeRect(-hs*1.5, -hs/2, this.size*1.5, this.size/2);
+                        break;
+                    case "pod-3":
+                    case "pod-5":
+                        let count = this.shape === "pod-3" ? 3 : 5; let r = hs/2;
+                        let offsets = [[0,0], [-hs, -hs], [-hs, hs], [hs, -hs], [hs, hs]];
+                        for(let i=0; i<count; i++) {
+                            ctx.beginPath(); ctx.arc(offsets[i][0], offsets[i][1], r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                            ctx.fillStyle = 'white'; ctx.fillRect(offsets[i][0]+r/2, offsets[i][1]-r/2, r/2, r/2);
+                            ctx.fillStyle = 'black'; ctx.fillRect(offsets[i][0]+r/2+1, offsets[i][1]-r/2+1, r/4, r/4);
+                            ctx.fillStyle = this.color; 
+                        }
+                        return;
+                    case "rect":
+                    default:
+                        ctx.fillRect(-hs, -hs, this.size, this.size); ctx.strokeRect(-hs, -hs, this.size, this.size);
+                        break;
+                }
+
+                ctx.globalAlpha = 1.0; 
+
+                // Anglerfish glowing lure
+                if (isAngler) {
+                    ctx.beginPath(); ctx.arc(hs+20, -5, 8, 0, Math.PI*2); 
+                    ctx.fillStyle = '#ffff00'; ctx.shadowBlur = 15; ctx.shadowColor = '#ffff00'; ctx.fill(); ctx.shadowBlur = 0;
+                }
+
+                // Eyes
+                ctx.fillStyle = 'white'; ctx.fillRect(this.size/4, -this.size/4, this.size/4, this.size/4);
+                ctx.fillStyle = 'black'; ctx.fillRect(this.size/4 + 2, -this.size/4 + 2, this.size/8, this.size/8);
+            }
+
+            drawEntity(ctx, isPlayer = false) {
+                ctx.save();
+                
+                // Jörmungandr trailing segments
+                if (this.animalName === 'Jörmungandr' && this.history.length > 0) {
+                    for (let i = 10; i < this.history.length; i+=25) {
+                        let seg = this.history[i];
+                        let scale = Math.max(0.2, 1 - (i / 300));
+                        let segSize = this.size * scale;
+                        
+                        ctx.save();
+                        ctx.translate(seg.x, seg.y);
+                        ctx.rotate(seg.angle);
+                        ctx.fillStyle = (this.poisonTicks > 0) ? '#b3ffb3' : '#1d3333';
+                        ctx.fillRect(-segSize/2, -segSize/2, segSize, segSize);
+                        ctx.strokeRect(-segSize/2, -segSize/2, segSize, segSize);
+                        ctx.restore();
+                    }
+                }
+
+                ctx.translate(this.x, this.y);
+                
+                if (!isPlayer && this.hp < this.maxHp) {
+                    let w = Math.min(this.size, 150);
+                    ctx.fillStyle = 'black'; ctx.fillRect(-w/2, -this.size/2 - 20, w, 10);
+                    ctx.fillStyle = '#ff3333'; ctx.fillRect(-w/2, -this.size/2 - 20, w * Math.max(0, this.hp/this.maxHp), 10);
+                    ctx.strokeStyle = 'white'; ctx.strokeRect(-w/2, -this.size/2 - 20, w, 10);
+                }
+
+                ctx.rotate(this.angle);
+                this.drawShape(ctx, this.size/2);
+                ctx.restore();
+            }
+        }
+
+        class Player extends Entity {
+            constructor(x, y) {
+                super(x, y, "Fish");
+                this.xp = 0;
+                this.maxStamina = 100;
+                this.stamina = 100;
+                this.isBoosting = false;
+            }
+
+            update(mouse, camera, canvas, terrainList, gameManager) {
+                let inWater = this.y > WATER_LEVEL;
+                let targetX = camera.x + (mouse.x - canvas.width / 2) / camera.zoom;
+                let targetY = camera.y + (mouse.y - canvas.height / 2) / camera.zoom;
+
+                this.angle = Math.atan2(targetY - this.y, targetX - this.x);
+
+                if (inWater) {
+                    let dist = Math.hypot(targetX - this.x, targetY - this.y);
+                    if (dist > 10) {
+                        this.vx += Math.cos(this.angle) * this.accel;
+                        this.vy += Math.sin(this.angle) * this.accel;
+                    }
+                    if (this.stamina < this.maxStamina) this.stamina += 0.5;
+                } else {
+                    this.vx += Math.cos(this.angle) * 0.1;
+                }
+
+                if (this.isBoosting && this.stamina >= 30) {
+                    this.stamina -= 30;
+                    this.isBoostingFrames = 30; // Active frames for Swordfish damage bonus
+                    
+                    // Swordfish boosts faster
+                    let isSword = this.animalName === 'Swordfish';
+                    let boostMult = (isSword ? 35 : 20) + (this.size * 0.05); 
+                    
+                    this.vx += Math.cos(this.angle) * boostMult;
+                    this.vy += Math.sin(this.angle) * boostMult;
+
+                    // Octopus/Squid ink cloud
+                    if (['Octopus', 'Giant Squid', 'Lusca', 'Kraken'].includes(this.animalName)) {
+                        gameManager.inks.push(new InkCloud(this.x, this.y, this.size * 2));
+                    }
+                }
+                this.isBoosting = false; 
+
+                this.applyPhysics(gameManager);
+                this.handleCollisions(terrainList);
+            }
+
+            eat(foodList, gameManager) {
+                for (let f of foodList) {
+                    if (!f.active) continue;
+                    if (Math.hypot(f.x - this.x, f.y - this.y) < this.size/2 + f.radius) {
+                        f.active = false;
+                        this.xp += f.xpValue;
+                        this.hp = Math.min(this.maxHp, this.hp + f.healValue);
+                        
+                        let nextReq = ANIMALS[this.animalName].nextXP;
+                        if (nextReq && this.xp >= nextReq) gameManager.triggerEvolution();
+                    }
+                }
+            }
+        }
+
+        class Enemy extends Entity {
+            constructor(x, y, animalName) {
+                super(x, y, animalName);
+                this.targetAngle = Math.random() * Math.PI * 2;
+                this.changeDirTimer = 0;
+            }
+
+            update(player, terrainList, gameManager) {
+                let inWater = this.y > WATER_LEVEL;
+                if (inWater) {
+                    let distToPlayer = Math.hypot(player.x - this.x, player.y - this.y);
+                    
+                    // Vision scales with size
+                    let vision = 600 + this.size * 2; 
+
+                    if (distToPlayer < vision && player.hp > 0) {
+                        let angleToPlayer = Math.atan2(player.y - this.y, player.x - this.x);
+                        if (this.tier > player.tier) this.targetAngle = angleToPlayer; // Chase
+                        else if (this.tier < player.tier) this.targetAngle = angleToPlayer + Math.PI; // Flee
+                    } else {
+                        this.changeDirTimer--;
+                        if (this.changeDirTimer <= 0) {
+                            this.targetAngle = Math.random() * Math.PI * 2;
+                            this.changeDirTimer = 60 + Math.random() * 60;
+                        }
+                    }
+
+                    let diff = this.targetAngle - this.angle;
+                    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+                    this.angle += diff * 0.05;
+
+                    this.vx += Math.cos(this.angle) * this.accel * 0.6;
+                    this.vy += Math.sin(this.angle) * this.accel * 0.6;
+                }
+                this.applyPhysics(gameManager);
+                this.handleCollisions(terrainList);
+            }
+        }
+
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.xpDisplay = document.getElementById('xp-display');
+                this.animalDisplay = document.getElementById('player-animal');
+                this.xpFill = document.getElementById('xp-bar-fill');
+                this.xpText = document.getElementById('xp-text');
+                this.healthFill = document.getElementById('health-bar-fill');
+                this.boostFill = document.getElementById('boost-bar-fill');
+                this.statusOverlay = document.getElementById('status-overlay');
+                
+                this.evoScreen = document.getElementById('evo-screen');
+                this.evoOptionsContainer = document.getElementById('evo-options');
+                this.gameOverScreen = document.getElementById('game-over-screen');
+                
+                this.mouse = new Vector2(0, 0);
+                this.initEvents();
+                this.reset();
+                requestAnimationFrame(() => this.loop());
+            }
+
+            initEvents() {
+                window.addEventListener('resize', () => this.resize());
+                window.addEventListener('mousemove', e => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; });
+                window.addEventListener('mousedown', () => { if (this.state === 'playing') this.player.isBoosting = true; });
+                window.addEventListener('keydown', e => { if (e.code === 'Space' && this.state === 'playing') this.player.isBoosting = true; });
+                document.getElementById('restart-btn').addEventListener('click', () => this.reset());
+            }
+
+            resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
+
+            reset() {
+                this.camera = new Camera();
+                this.player = new Player(WORLD_WIDTH / 2, WATER_LEVEL + 500);
+                this.terrain = []; this.food = []; this.enemies = []; this.inks = [];
+                this.state = 'playing';
+                this.gameOverScreen.style.display = 'none';
+                this.evoScreen.style.display = 'none';
+                this.generateWorld();
+                this.resize();
+            }
+
+            generateWorld() {
+                this.terrain.push(new Terrain(0, WORLD_HEIGHT - 500, WORLD_WIDTH, 500)); // Seabed
+                
+                for(let i=0; i<60; i++) {
+                    let w = 300 + Math.random()*1000, h = 100 + Math.random()*200;
+                    let x = Math.random()*(WORLD_WIDTH-w), y = WATER_LEVEL - 50 - Math.random()*800;
+                    this.terrain.push(new Terrain(x, y, w, h, "island"));
+                }
+                for(let i=0; i<150; i++) {
+                    let w = 200 + Math.random()*800, h = 200 + Math.random()*800;
+                    let x = Math.random()*(WORLD_WIDTH-w), y = WATER_LEVEL + 500 + Math.random()*(WORLD_HEIGHT-WATER_LEVEL-1500);
+                    this.terrain.push(new Terrain(x, y, w, h, "solid"));
+                }
+                for (let i = 0; i < 3000; i++) this.spawnFoodItem();
+                for (let i = 0; i < 100; i++) this.spawnEnemy();
+            }
+
+            spawnFoodItem(x, y, isMeat = false, xpValue = 10, radius = 5) {
+                let fx = x !== undefined ? x : Math.random() * WORLD_WIDTH;
+                let fy = y !== undefined ? y : WATER_LEVEL + Math.random() * (WORLD_HEIGHT - WATER_LEVEL);
+                this.food.push(new Food(fx, fy, isMeat, xpValue, radius));
+            }
+
+            spawnEnemy() {
+                let x = Math.random() * WORLD_WIDTH;
+                let y = WATER_LEVEL + 200 + Math.random() * (WORLD_HEIGHT - WATER_LEVEL - 1000);
+                
+                let pTier = this.player ? this.player.tier : 1;
+                let minTier = Math.max(1, pTier - 2);
+                let maxTier = Math.min(20, pTier + 3); // Allow spawning slightly higher mythics
+                
+                let validAnimals = ANIMAL_NAMES.filter(name => ANIMALS[name].tier >= minTier && ANIMALS[name].tier <= maxTier);
+                let aName = validAnimals[Math.floor(Math.random() * validAnimals.length)];
+                
+                this.enemies.push(new Enemy(x, y, aName));
+            }
+
+            resolveCombat(e1, e2) {
+                let dx = e2.x - e1.x, dy = e2.y - e1.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                let minDist = e1.size/2 + e2.size/2;
+
+                if (dist < minDist && e1.bumpCooldown <= 0 && e2.bumpCooldown <= 0 && e1.hp > 0 && e2.hp > 0) {
+                    let nx = dx / (dist || 1), ny = dy / (dist || 1);
+                    
+                    // Knockback scales slightly with size diff
+                    let kb = 25; 
+                    e1.vx -= nx * kb * (e2.size/e1.size); e1.vy -= ny * kb * (e2.size/e1.size);
+                    e2.vx += nx * kb * (e1.size/e2.size); e2.vy += ny * kb * (e1.size/e2.size);
+
+                    let dmgToE2 = e1.damage;
+                    let dmgToE1 = e2.damage;
+
+                    // Swordfish Ability: 3x damage when boosting
+                    if (e1.animalName === 'Swordfish' && e1.isBoostingFrames > 0) dmgToE2 *= 3;
+                    if (e2.animalName === 'Swordfish' && e2.isBoostingFrames > 0) dmgToE1 *= 3;
+
+                    // Pufferfish Ability: Reflect 50% damage
+                    if (e2.animalName === 'Pufferfish' || e2.animalName === 'Hydra') dmgToE1 += dmgToE2 * 0.5;
+                    if (e1.animalName === 'Pufferfish' || e1.animalName === 'Hydra') dmgToE2 += dmgToE1 * 0.5;
+                    
+                    // Jellyfish Ability: Poison
+                    if (e1.animalName === 'Jellyfish' || e1.animalName === 'Lusca') e2.poisonTicks = 150; 
+                    if (e2.animalName === 'Jellyfish' || e2.animalName === 'Lusca') e1.poisonTicks = 150;
+
+                    e1.hp -= dmgToE1; e2.hp -= dmgToE2;
+                    e1.bumpCooldown = 20; e2.bumpCooldown = 20;
+                }
+            }
+
+            triggerEvolution() {
+                this.state = 'evolving';
+                let currentStats = ANIMALS[this.player.animalName];
+                this.evoOptionsContainer.innerHTML = '';
+
+                currentStats.evos.forEach(evoName => {
+                    let evoStats = ANIMALS[evoName];
+                    let card = document.createElement('div'); card.className = 'evo-card';
+                    card.innerHTML = `
+                        <div style="width:50px; height:50px; background:${evoStats.color}; margin: 0 auto 10px auto; border:2px solid #fff;"></div>
+                        <h3>${evoName}</h3><p>Tier ${evoStats.tier}</p>
+                    `;
+                    card.onclick = () => {
+                        this.player.setAnimal(evoName);
+                        this.state = 'playing';
+                        this.evoScreen.style.display = 'none';
+                    };
+                    this.evoOptionsContainer.appendChild(card);
+                });
+
+                this.evoScreen.style.display = 'flex';
+            }
+
+            updateUI() {
+                this.xpDisplay.innerText = formatXP(this.player.xp);
+                this.animalDisplay.innerText = `${this.player.animalName} (Tier ${this.player.tier})`;
+                
+                let nextReq = ANIMALS[this.player.animalName].nextXP;
+                if (nextReq) {
+                    let prevReq = this.player.tier === 1 ? 0 : ANIMALS[ANIMAL_NAMES.find(n => ANIMALS[n].tier === this.player.tier - 1)].nextXP || 0;
+                    let progress = Math.min(100, ((this.player.xp - prevReq) / (nextReq - prevReq)) * 100);
+                    this.xpFill.style.width = `${Math.max(0, progress)}%`;
+                    this.xpText.innerText = `${formatXP(this.player.xp)} / ${formatXP(nextReq)}`;
+                } else {
+                    this.xpFill.style.width = `100%`;
+                    this.xpText.innerText = `MAX TIER`;
+                }
+
+                this.healthFill.style.width = `${Math.max(0, (this.player.hp / this.player.maxHp) * 100)}%`;
+                this.boostFill.style.width = `${(this.player.stamina / this.player.maxStamina) * 100}%`;
+                
+                this.statusOverlay.style.opacity = (this.player.poisonTicks > 0) ? 1 : 0;
+            }
+
+            drawEnvironment() {
+                this.ctx.fillStyle = '#87CEEB';
+                this.ctx.fillRect(0, 0, WORLD_WIDTH, WATER_LEVEL);
+
+                let shallowGrad = this.ctx.createLinearGradient(0, WATER_LEVEL, 0, DEEP_LEVEL);
+                shallowGrad.addColorStop(0, 'rgba(0, 150, 255, 0.6)');
+                shallowGrad.addColorStop(1, 'rgba(0, 20, 80, 0.95)');
+                this.ctx.fillStyle = shallowGrad;
+                this.ctx.fillRect(0, WATER_LEVEL, WORLD_WIDTH, DEEP_LEVEL - WATER_LEVEL);
+
+                let deepGrad = this.ctx.createLinearGradient(0, DEEP_LEVEL, 0, WORLD_HEIGHT);
+                deepGrad.addColorStop(0, 'rgba(0, 20, 80, 0.95)');
+                deepGrad.addColorStop(1, 'rgba(0, 5, 20, 1)');
+                this.ctx.fillStyle = deepGrad;
+                this.ctx.fillRect(0, DEEP_LEVEL, WORLD_WIDTH, WORLD_HEIGHT - DEEP_LEVEL);
+
+                this.ctx.beginPath(); this.ctx.moveTo(0, WATER_LEVEL); this.ctx.lineTo(WORLD_WIDTH, WATER_LEVEL);
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; this.ctx.lineWidth = 10; this.ctx.stroke();
+            }
+
+            loop() {
+                if (this.state === 'playing') {
+                    this.player.update(this.mouse, this.camera, this.canvas, this.terrain, this);
+                    this.player.eat(this.food, this);
+
+                    if (this.player.hp <= 0) {
+                        this.state = 'gameover';
+                        document.getElementById('final-xp').innerText = formatXP(this.player.xp);
+                        document.getElementById('final-animal').innerText = `${this.player.animalName} (Tier ${this.player.tier})`;
+                        this.gameOverScreen.style.display = 'flex';
+                    }
+
+                    for (let i = this.enemies.length - 1; i >= 0; i--) {
+                        let enemy = this.enemies[i];
+                        enemy.update(this.player, this.terrain, this);
+                        
+                        if (enemy.hp <= 0) {
+                            // Massive meat drops for massive creatures
+                            let meatValue = ANIMALS[enemy.animalName].nextXP ? ANIMALS[enemy.animalName].nextXP * 0.15 : 1000 * T;
+                            if (enemy.tier === 1) meatValue = 50; 
+                            
+                            let meatCount = Math.min(15, Math.max(3, Math.floor(enemy.size / 40)));
+                            let valPerMeat = meatValue / meatCount;
+                            let radius = Math.min(80, Math.max(10, enemy.size / 10));
+
+                            for(let m=0; m<meatCount; m++) {
+                                this.spawnFoodItem(enemy.x + (Math.random()*enemy.size - enemy.size/2), 
+                                                   enemy.y + (Math.random()*enemy.size - enemy.size/2), 
+                                                   true, valPerMeat, radius);
+                            }
+                            this.enemies.splice(i, 1);
+                        }
+                    }
+
+                    if (this.enemies.length < 100 && Math.random() < 0.1) this.spawnEnemy();
+
+                    this.food = this.food.filter(f => f.active);
+                    while (this.food.length < 3000) this.spawnFoodItem();
+
+                    // Update Inks
+                    for(let i=this.inks.length-1; i>=0; i--) {
+                        this.inks[i].life--;
+                        if (this.inks[i].life <= 0) this.inks.splice(i, 1);
+                    }
+
+                    for (let enemy of this.enemies) this.resolveCombat(this.player, enemy);
+                    for(let i=0; i<this.enemies.length; i++) {
+                        for(let j=i+1; j<this.enemies.length; j++) {
+                            this.resolveCombat(this.enemies[i], this.enemies[j]);
+                        }
+                    }
+
+                    this.camera.follow(this.player, 0.1);
+                    this.updateUI();
+                }
+
+                // Render
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.camera.apply(this.ctx, this.canvas);
+                
+                this.drawEnvironment();
+                for (let ink of this.inks) ink.draw(this.ctx);
+                for (let f of this.food) f.draw(this.ctx);
+                for (let t of this.terrain) t.draw(this.ctx);
+                
+                // Depth sorting
+                let allEntities = [...this.enemies, this.player].filter(e => e.hp > 0);
+                allEntities.sort((a,b) => b.size - a.size);
+                
+                for (let ent of allEntities) ent.drawEntity(this.ctx, ent === this.player);
+
+                this.camera.release(this.ctx);
+                requestAnimationFrame(() => this.loop());
+            }
+        }
+
+        window.onload = () => { window.game = new Game(); };
+    </script>
+</body>
+</html>
