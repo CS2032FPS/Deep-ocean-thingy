@@ -223,20 +223,77 @@
             }
         }
 
+        // --- UPDATED FOOD CLASS (Multiple EXP Types) ---
         class Food {
             constructor(x, y, isMeat = false, xpValue = 10, radius = 5) {
                 this.x = x; this.y = y; this.isMeat = isMeat; this.active = true;
-                this.xpValue = xpValue;
-                this.radius = radius;
-                this.healValue = isMeat ? (xpValue * 0.05) : 2;
-                this.color = isMeat ? '#ff4d4d' : `hsl(${Math.random() * 360}, 100%, 60%)`;
+                
+                if (isMeat) {
+                    this.type = 'meat';
+                    this.xpValue = xpValue;
+                    this.radius = radius;
+                    this.color = '#ff4d4d'; // Blood red
+                } else {
+                    // Randomize ambient food types
+                    const rand = Math.random();
+                    if (rand < 0.55) {
+                        this.type = 'algae'; 
+                        this.xpValue = 15;
+                        this.radius = 5;
+                        this.color = '#32CD32'; // Lime green
+                    } else if (rand < 0.90) {
+                        this.type = 'plankton'; 
+                        this.xpValue = 35;
+                        this.radius = 6;
+                        this.color = '#1E90FF'; // Dodger blue
+                    } else if (rand < 0.98) {
+                        this.type = 'krill'; 
+                        this.xpValue = 80;
+                        this.radius = 7;
+                        this.color = '#FF8C00'; // Dark orange
+                    } else {
+                        this.type = 'gold_cube'; 
+                        this.xpValue = 300;
+                        this.radius = 9;
+                        this.color = '#FFD700'; // Gold
+                    }
+                }
+                
+                this.healValue = this.isMeat ? (this.xpValue * 0.05) : (this.xpValue * 0.1);
             }
+
             draw(ctx) {
                 if (!this.active) return;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color; ctx.fill(); ctx.closePath();
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                
+                if (this.type === 'algae' || this.type === 'meat') {
+                    // Draw as a cube/square
+                    ctx.rect(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
+                } else if (this.type === 'gold_cube') {
+                    // Draw as a glowing cube
+                    ctx.rect(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
+                    ctx.fill();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.stroke();
+                    ctx.closePath();
+                    return; // skip standard fill below to keep the stroke visible
+                } else if (this.type === 'krill') {
+                    // Draw as a triangle
+                    ctx.moveTo(this.x, this.y - this.radius);
+                    ctx.lineTo(this.x + this.radius, this.y + this.radius);
+                    ctx.lineTo(this.x - this.radius, this.y + this.radius);
+                } else {
+                    // Default circle for plankton
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                }
+                
+                ctx.fill();
+                ctx.closePath();
             }
         }
+        // --- END UPDATED FOOD CLASS ---
 
         class Entity {
             constructor(x, y, animalName) {
