@@ -8,7 +8,7 @@
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
             background-color: #87CEEB; font-family: 'Segoe UI', sans-serif; user-select: none;
-            touch-action: none; /* Prevents default mobile scrolling */
+            touch-action: none;
         }
         canvas { display: block; }
         
@@ -55,13 +55,11 @@
         }
         button.play-btn:hover { background: #007acc; transform: scale(1.05); }
 
-        /* Status Effects Indicator Overlay */
         #status-overlay {
             position: fixed; top: 20%; left: 50%; transform: translateX(-50%); pointer-events: none;
             color: #ff3333; font-weight: bold; font-size: 24px; text-shadow: 1px 1px 2px black; opacity: 0; transition: opacity 0.2s;
         }
 
-        /* Mobile & Fullscreen UI Additions */
         #fullscreen-btn {
             position: fixed; top: 20px; right: 20px; z-index: 15;
             background: rgba(0, 0, 0, 0.5); color: white; border: 2px solid white;
@@ -116,7 +114,6 @@
     </div>
 
     <script>
-        // --- CONSTANTS ---
         const M = 1000000;
         const B = 1000000000;
         const T = 1000000000000;
@@ -126,48 +123,44 @@
         const WATER_LEVEL = 2000;
         const DEEP_LEVEL = 8000;
 
-        // --- ANIMAL DICTIONARY ---
         const ANIMALS = {
-            // Tiers 1-8
-            "Fish": { tier: 1, size: 30, color: "#ff6b6b", shape: "rect", nextXP: 500, evos: ["Jellyfish", "School of Fish", "Pufferfish"] },
+            "Fish": { tier: 1, size: 30, color: "#ff6b6b", shape: "fish", nextXP: 500, evos: ["Jellyfish", "School of Fish", "Pufferfish"] },
             "Jellyfish": { tier: 2, size: 40, color: "rgba(255,105,180,0.8)", shape: "jelly", nextXP: 2500, evos: ["Small Shark", "Swordfish", "Anglerfish"] },
             "School of Fish": { tier: 2, size: 45, color: "#87CEFA", shape: "pod-3", nextXP: 2500, evos: ["Small Shark", "Swordfish", "Anglerfish"] },
-            "Pufferfish": { tier: 2, size: 45, color: "#FFD700", shape: "circle-spike", nextXP: 2500, evos: ["Small Shark", "Swordfish", "Anglerfish"] },
-            "Small Shark": { tier: 3, size: 55, color: "#A9A9A9", shape: "rect", nextXP: 10000, evos: ["Medium Shark", "Sawfish", "Octopus"] },
+            "Pufferfish": { tier: 2, size: 45, color: "#FFD700", shape: "puffer", nextXP: 2500, evos: ["Small Shark", "Swordfish", "Anglerfish"] },
+            "Small Shark": { tier: 3, size: 55, color: "#A9A9A9", shape: "shark", nextXP: 10000, evos: ["Medium Shark", "Sawfish", "Octopus"] },
             "Swordfish": { tier: 3, size: 50, color: "#4682B4", shape: "sword", nextXP: 10000, evos: ["Medium Shark", "Sawfish", "Octopus"] },
             "Anglerfish": { tier: 3, size: 50, color: "#2F4F4F", shape: "angler", nextXP: 10000, evos: ["Medium Shark", "Sawfish", "Octopus"] },
-            "Medium Shark": { tier: 4, size: 70, color: "#808080", shape: "rect", nextXP: 45000, evos: ["Big Shark", "Giant Squid", "Orca"] },
+            "Medium Shark": { tier: 4, size: 70, color: "#808080", shape: "shark", nextXP: 45000, evos: ["Big Shark", "Giant Squid", "Orca"] },
             "Sawfish": { tier: 4, size: 65, color: "#8B4513", shape: "saw", nextXP: 45000, evos: ["Big Shark", "Giant Squid", "Orca"] },
             "Octopus": { tier: 4, size: 60, color: "#800080", shape: "octo", nextXP: 45000, evos: ["Big Shark", "Giant Squid", "Orca"] },
-            "Big Shark": { tier: 5, size: 90, color: "#696969", shape: "rect", nextXP: 150000, evos: ["Sperm Whale", "Beluga Whale", "Dolphin Pod"] },
+            "Big Shark": { tier: 5, size: 90, color: "#696969", shape: "shark", nextXP: 150000, evos: ["Sperm Whale", "Beluga Whale", "Dolphin Pod"] },
             "Giant Squid": { tier: 5, size: 85, color: "#DC143C", shape: "octo", nextXP: 150000, evos: ["Sperm Whale", "Beluga Whale", "Dolphin Pod"] },
             "Orca": { tier: 5, size: 95, color: "#000000", shape: "orca", nextXP: 150000, evos: ["Sperm Whale", "Beluga Whale", "Dolphin Pod"] },
-            "Sperm Whale": { tier: 6, size: 120, color: "#708090", shape: "rect", nextXP: 500000, evos: ["Humpback Whale", "Fin Whale"] },
-            "Beluga Whale": { tier: 6, size: 110, color: "#FFFFFF", shape: "rect", nextXP: 500000, evos: ["Humpback Whale", "Fin Whale"] },
+            "Sperm Whale": { tier: 6, size: 120, color: "#708090", shape: "whale", nextXP: 500000, evos: ["Humpback Whale", "Fin Whale"] },
+            "Beluga Whale": { tier: 6, size: 110, color: "#FFFFFF", shape: "whale", nextXP: 500000, evos: ["Humpback Whale", "Fin Whale"] },
             "Dolphin Pod": { tier: 6, size: 100, color: "#ADD8E6", shape: "pod-5", nextXP: 500000, evos: ["Humpback Whale", "Fin Whale"] },
-            "Humpback Whale": { tier: 7, size: 160, color: "#2F4F4F", shape: "rect", nextXP: 1500000, evos: ["Oarfish", "Blue Whale"] },
-            "Fin Whale": { tier: 7, size: 150, color: "#556B2F", shape: "rect", nextXP: 1500000, evos: ["Oarfish", "Blue Whale"] },
-            "Oarfish": { tier: 8, size: 180, color: "#C0C0C0", shape: "long-rect", nextXP: 25 * M, evos: ["Siren"] },
-            "Blue Whale": { tier: 8, size: 220, color: "#4169E1", shape: "rect", nextXP: 25 * M, evos: ["Siren"] },
+            "Humpback Whale": { tier: 7, size: 160, color: "#2F4F4F", shape: "whale", nextXP: 1500000, evos: ["Oarfish", "Blue Whale"] },
+            "Fin Whale": { tier: 7, size: 150, color: "#556B2F", shape: "whale", nextXP: 1500000, evos: ["Oarfish", "Blue Whale"] },
+            "Oarfish": { tier: 8, size: 180, color: "#C0C0C0", shape: "serpent", nextXP: 25 * M, evos: ["Siren"] },
+            "Blue Whale": { tier: 8, size: 220, color: "#4169E1", shape: "whale", nextXP: 25 * M, evos: ["Siren"] },
             
-            // Mythic Tiers (9-20)
-            "Siren": { tier: 9, size: 280, color: "#FF69B4", shape: "circle", nextXP: 150 * M, evos: ["Scylla"] },
-            "Scylla": { tier: 10, size: 340, color: "#8B0000", shape: "octo", nextXP: 750 * M, evos: ["Hydra"] },
-            "Hydra": { tier: 11, size: 420, color: "#006400", shape: "pod-5", nextXP: 3 * B, evos: ["Kraken"] },
-            "Kraken": { tier: 12, size: 500, color: "#4B0082", shape: "octo", nextXP: 15 * B, evos: ["Ningen"] },
-            "Ningen": { tier: 13, size: 600, color: "#F0F8FF", shape: "rect", nextXP: 85 * B, evos: ["Sea Serpent"] },
-            "Sea Serpent": { tier: 14, size: 700, color: "#20B2AA", shape: "long-rect", nextXP: 500 * B, evos: ["Lusca"] },
-            "Lusca": { tier: 15, size: 820, color: "#800000", shape: "octo", nextXP: 2.5 * T, evos: ["Cthulhu"] },
-            "Cthulhu": { tier: 16, size: 950, color: "#00FA9A", shape: "octo", nextXP: 15 * T, evos: ["Leviathan"] },
-            "Leviathan": { tier: 17, size: 1100, color: "#00008B", shape: "long-rect", nextXP: 100 * T, evos: ["Aspidochelone"] },
-            "Aspidochelone": { tier: 18, size: 1300, color: "#556B2F", shape: "circle", nextXP: 750 * T, evos: ["The Bloop"] },
-            "The Bloop": { tier: 19, size: 1500, color: "#191970", shape: "circle", nextXP: 9999 * T, evos: ["Jörmungandr"] },
-            "Jörmungandr": { tier: 20, size: 1800, color: "#2F4F4F", shape: "long-rect", nextXP: null, evos: [] }
+            "Siren": { tier: 9, size: 280, color: "#FF69B4", shape: "siren", nextXP: 150 * M, evos: ["Scylla"] },
+            "Scylla": { tier: 10, size: 340, color: "#8B0000", shape: "scylla", nextXP: 750 * M, evos: ["Hydra"] },
+            "Hydra": { tier: 11, size: 420, color: "#006400", shape: "hydra", nextXP: 3 * B, evos: ["Kraken"] },
+            "Kraken": { tier: 12, size: 500, color: "#4B0082", shape: "kraken", nextXP: 15 * B, evos: ["Ningen"] },
+            "Ningen": { tier: 13, size: 600, color: "#F0F8FF", shape: "ningen", nextXP: 85 * B, evos: ["Sea Serpent"] },
+            "Sea Serpent": { tier: 14, size: 700, color: "#20B2AA", shape: "serpent", nextXP: 500 * B, evos: ["Lusca"] },
+            "Lusca": { tier: 15, size: 820, color: "#800000", shape: "lusca", nextXP: 2.5 * T, evos: ["Cthulhu"] },
+            "Cthulhu": { tier: 16, size: 950, color: "#00FA9A", shape: "cthulhu", nextXP: 15 * T, evos: ["Leviathan"] },
+            "Leviathan": { tier: 17, size: 1100, color: "#00008B", shape: "leviathan", nextXP: 100 * T, evos: ["Aspidochelone"] },
+            "Aspidochelone": { tier: 18, size: 1300, color: "#556B2F", shape: "turtle", nextXP: 750 * T, evos: ["The Bloop"] },
+            "The Bloop": { tier: 19, size: 1500, color: "#191970", shape: "bloop", nextXP: 9999 * T, evos: ["Jörmungandr"] },
+            "Jörmungandr": { tier: 20, size: 1800, color: "#2F4F4F", shape: "serpent", nextXP: null, evos: [] }
         };
 
         const ANIMAL_NAMES = Object.keys(ANIMALS);
 
-        // --- FORMATTING UTILS ---
         function formatXP(num) {
             if (num >= T) return (num / T).toFixed(1) + 'T';
             if (num >= B) return (num / B).toFixed(1) + 'B';
@@ -184,7 +177,7 @@
                 this.y += (target.y - this.y) * lerp;
                 
                 let targetZoom = 35 / target.size;
-                targetZoom = Math.max(0.02, Math.min(targetZoom, 1.2)); // Allow massive zoom out
+                targetZoom = Math.max(0.02, Math.min(targetZoom, 1.2)); 
                 this.zoom += (targetZoom - this.zoom) * 0.05;
 
                 this.x = Math.max(0, Math.min(this.x, WORLD_WIDTH));
@@ -202,7 +195,7 @@
         class InkCloud {
             constructor(x, y, radius) {
                 this.x = x; this.y = y; this.radius = radius;
-                this.life = 200; // frames
+                this.life = 200;
             }
             draw(ctx) {
                 let alpha = this.life / 200;
@@ -223,7 +216,6 @@
             }
         }
 
-        // --- UPDATED FOOD CLASS (Multiple EXP Types) ---
         class Food {
             constructor(x, y, isMeat = false, xpValue = 10, radius = 5) {
                 this.x = x; this.y = y; this.isMeat = isMeat; this.active = true;
@@ -232,31 +224,19 @@
                     this.type = 'meat';
                     this.xpValue = xpValue;
                     this.radius = radius;
-                    this.color = '#ff4d4d'; // Blood red
+                    this.color = '#ff4d4d';
                 } else {
-                    // Randomize ambient food types
                     const rand = Math.random();
-                    if (rand < 0.55) {
-                        this.type = 'algae'; 
-                        this.xpValue = 15;
-                        this.radius = 5;
-                        this.color = '#32CD32'; // Lime green
-                    } else if (rand < 0.90) {
-                        this.type = 'plankton'; 
-                        this.xpValue = 35;
-                        this.radius = 6;
-                        this.color = '#1E90FF'; // Dodger blue
-                    } else if (rand < 0.98) {
-                        this.type = 'krill'; 
-                        this.xpValue = 80;
-                        this.radius = 7;
-                        this.color = '#FF8C00'; // Dark orange
-                    } else {
-                        this.type = 'gold_cube'; 
-                        this.xpValue = 300;
-                        this.radius = 9;
-                        this.color = '#FFD700'; // Gold
-                    }
+                    if (rand < 0.20) { this.type = 'algae'; this.xpValue = 15; this.radius = 5; this.color = '#32CD32'; }
+                    else if (rand < 0.40) { this.type = 'plankton'; this.xpValue = 25; this.radius = 5; this.color = '#1E90FF'; }
+                    else if (rand < 0.55) { this.type = 'kelp'; this.xpValue = 40; this.radius = 7; this.color = '#006400'; }
+                    else if (rand < 0.70) { this.type = 'krill'; this.xpValue = 60; this.radius = 6; this.color = '#FF8C00'; }
+                    else if (rand < 0.82) { this.type = 'berry'; this.xpValue = 90; this.radius = 6; this.color = '#8A2BE2'; }
+                    else if (rand < 0.90) { this.type = 'starfish'; this.xpValue = 150; this.radius = 9; this.color = '#FF4500'; }
+                    else if (rand < 0.95) { this.type = 'coral'; this.xpValue = 200; this.radius = 10; this.color = '#FF69B4'; }
+                    else if (rand < 0.98) { this.type = 'pearl'; this.xpValue = 350; this.radius = 8; this.color = '#F5F5F5'; }
+                    else if (rand < 0.995) { this.type = 'gem'; this.xpValue = 600; this.radius = 10; this.color = '#00FFFF'; }
+                    else { this.type = 'gold_cube'; this.xpValue = 1000; this.radius = 12; this.color = '#FFD700'; }
                 }
                 
                 this.healValue = this.isMeat ? (this.xpValue * 0.05) : (this.xpValue * 0.1);
@@ -267,40 +247,57 @@
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
                 
-                if (this.type === 'algae' || this.type === 'meat') {
-                    // Draw as a cube/square
-                    ctx.rect(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
-                } else if (this.type === 'gold_cube') {
-                    // Draw as a glowing cube
+                if (this.type === 'algae' || this.type === 'meat' || this.type === 'gold_cube') {
                     ctx.rect(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
                     ctx.fill();
-                    ctx.lineWidth = 2;
-                    ctx.strokeStyle = '#FFFFFF';
-                    ctx.stroke();
-                    ctx.closePath();
-                    return; // skip standard fill below to keep the stroke visible
+                    if (this.type === 'gold_cube') {
+                        ctx.lineWidth = 2; ctx.strokeStyle = '#FFFFFF'; ctx.stroke();
+                    }
                 } else if (this.type === 'krill') {
-                    // Draw as a triangle
                     ctx.moveTo(this.x, this.y - this.radius);
                     ctx.lineTo(this.x + this.radius, this.y + this.radius);
                     ctx.lineTo(this.x - this.radius, this.y + this.radius);
+                    ctx.fill();
+                } else if (this.type === 'starfish') {
+                    for (let i = 0; i < 5; i++) {
+                        ctx.lineTo(this.x + Math.cos(i * Math.PI * 0.4) * this.radius, this.y + Math.sin(i * Math.PI * 0.4) * this.radius);
+                        ctx.lineTo(this.x + Math.cos((i + 0.5) * Math.PI * 0.4) * (this.radius / 2), this.y + Math.sin((i + 0.5) * Math.PI * 0.4) * (this.radius / 2));
+                    }
+                    ctx.fill();
+                } else if (this.type === 'gem') {
+                    ctx.moveTo(this.x, this.y - this.radius);
+                    ctx.lineTo(this.x + this.radius, this.y);
+                    ctx.lineTo(this.x, this.y + this.radius);
+                    ctx.lineTo(this.x - this.radius, this.y);
+                    ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#FFFFFF'; ctx.stroke();
+                } else if (this.type === 'pearl') {
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.beginPath(); ctx.arc(this.x - this.radius/3, this.y - this.radius/3, this.radius/3, 0, Math.PI * 2); ctx.fill();
+                } else if (this.type === 'kelp') {
+                    ctx.moveTo(this.x - this.radius/2, this.y - this.radius);
+                    ctx.quadraticCurveTo(this.x + this.radius, this.y, this.x - this.radius/2, this.y + this.radius);
+                    ctx.quadraticCurveTo(this.x - this.radius, this.y, this.x - this.radius/2, this.y - this.radius);
+                    ctx.fill();
+                } else if (this.type === 'coral') {
+                    ctx.arc(this.x, this.y, this.radius/1.5, 0, Math.PI*2);
+                    ctx.arc(this.x - this.radius, this.y - this.radius/2, this.radius/2, 0, Math.PI*2);
+                    ctx.arc(this.x + this.radius, this.y - this.radius/2, this.radius/2, 0, Math.PI*2);
+                    ctx.fill();
                 } else {
-                    // Default circle for plankton
                     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
                 }
-                
-                ctx.fill();
                 ctx.closePath();
             }
         }
-        // --- END UPDATED FOOD CLASS ---
 
         class Entity {
             constructor(x, y, animalName) {
                 this.x = x; this.y = y; this.vx = 0; this.vy = 0; this.angle = 0;
                 this.bumpCooldown = 0; this.isDead = false;
                 this.poisonTicks = 0; this.isBoostingFrames = 0;
-                this.history = []; // For Jörmungandr
+                this.history = []; 
                 this.setAnimal(animalName);
             }
 
@@ -323,13 +320,11 @@
                 if (this.bumpCooldown > 0) this.bumpCooldown--;
                 if (this.isBoostingFrames > 0) this.isBoostingFrames--;
                 
-                // Status Effects: Poison
                 if (this.poisonTicks > 0) {
                     this.poisonTicks--;
                     if (this.poisonTicks % 30 === 0) this.hp -= (this.maxHp * 0.02);
                 }
 
-                // Status Effects: Ink Slowing
                 let inInk = false;
                 if (gameManager) {
                     for(let ink of gameManager.inks) {
@@ -347,7 +342,6 @@
                     this.vx *= this.airFriction; this.vy *= this.airFriction;
                 }
                 
-                // Aspidochelone unique: Locked to surface (cannot go deeper than 1000px below water level)
                 if (this.animalName === 'Aspidochelone') {
                     if (this.y > WATER_LEVEL + 1000) {
                         this.y = WATER_LEVEL + 1000;
@@ -357,14 +351,12 @@
 
                 this.x += this.vx; this.y += this.vy;
 
-                // Bounds
                 if (this.x < 0) { this.x = 0; this.vx *= -0.5; }
                 if (this.x > WORLD_WIDTH) { this.x = WORLD_WIDTH; this.vx *= -0.5; }
                 if (this.y < 0) { this.y = 0; this.vy *= -0.5; }
                 if (this.y > WORLD_HEIGHT) { this.y = WORLD_HEIGHT; this.vy *= -0.5; }
 
-                // Jörmungandr segments tracker
-                if (this.animalName === 'Jörmungandr') {
+                if (['Jörmungandr', 'Sea Serpent', 'Oarfish', 'Leviathan'].includes(this.animalName)) {
                     this.history.unshift({x: this.x, y: this.y, angle: this.angle});
                     if (this.history.length > 300) this.history.pop();
                 }
@@ -394,50 +386,119 @@
                 let isAngler = this.animalName === 'Anglerfish';
                 let isDeep = this.y > DEEP_LEVEL;
 
-                if (isAngler && isDeep) ctx.globalAlpha = 0.15; // Anglerfish stealth
+                if (isAngler && isDeep) ctx.globalAlpha = 0.15; 
                 
                 ctx.fillStyle = this.poisonTicks > 0 ? '#b3ffb3' : this.color;
-                ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 2;
 
                 switch(this.shape) {
-                    case "circle":
-                    case "circle-spike":
+                    case "fish":
+                        ctx.beginPath();
+                        ctx.moveTo(hs, 0); ctx.lineTo(-hs, -hs/1.2); ctx.lineTo(-hs, hs/1.2); ctx.closePath();
+                        ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(-hs, 0); ctx.lineTo(-hs*1.5, -hs/1.5); ctx.lineTo(-hs*1.5, hs/1.5); ctx.closePath();
+                        ctx.fillStyle = this.color; ctx.fill(); ctx.stroke(); // tail
+                        break;
+                    case "shark":
+                        ctx.beginPath();
+                        ctx.moveTo(hs, 0); ctx.lineTo(hs/2, -hs/2); ctx.lineTo(-hs, -hs/1.5); ctx.lineTo(-hs, hs/1.5); ctx.lineTo(hs/2, hs/2); ctx.closePath();
+                        ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(-hs/2, -hs/2); ctx.lineTo(-hs, -hs*1.2); ctx.lineTo(-hs/1.5, -hs/2); ctx.fill(); ctx.stroke(); // Dorsal
+                        ctx.beginPath(); ctx.moveTo(-hs, 0); ctx.lineTo(-hs*1.5, -hs); ctx.lineTo(-hs*1.2, 0); ctx.lineTo(-hs*1.5, hs); ctx.closePath(); ctx.fill(); ctx.stroke(); // Tail
+                        break;
+                    case "whale":
+                        ctx.fillRect(-hs, -hs/1.2, this.size, this.size/1.2); ctx.strokeRect(-hs, -hs/1.2, this.size, this.size/1.2);
+                        ctx.beginPath(); ctx.moveTo(-hs, 0); ctx.lineTo(-hs*1.5, -hs/1.5); ctx.lineTo(-hs*1.5, hs/1.5); ctx.closePath(); ctx.fill(); ctx.stroke(); // Flukes
+                        break;
+                    case "puffer":
                         ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-                        if(this.shape === "circle-spike") {
-                            for(let i=0; i<8; i++) {
-                                ctx.rotate(Math.PI/4);
-                                ctx.beginPath(); ctx.moveTo(hs, -5); ctx.lineTo(hs+10, 0); ctx.lineTo(hs, 5); ctx.fill();
-                            }
+                        for(let i=0; i<12; i++) {
+                            ctx.rotate(Math.PI/6);
+                            ctx.beginPath(); ctx.moveTo(hs, -3); ctx.lineTo(hs+12, 0); ctx.lineTo(hs, 3); ctx.fillStyle='white'; ctx.fill(); ctx.stroke();
                         }
                         break;
                     case "jelly":
                         ctx.beginPath(); ctx.arc(0, 0, hs, Math.PI, Math.PI*2); ctx.fill(); ctx.stroke();
-                        ctx.beginPath(); ctx.moveTo(-hs+5, 0); ctx.lineTo(-hs+5, hs); ctx.stroke();
-                        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, hs); ctx.stroke();
-                        ctx.beginPath(); ctx.moveTo(hs-5, 0); ctx.lineTo(hs-5, hs); ctx.stroke();
+                        for(let i=-hs+5; i<hs; i+=10) {
+                            ctx.beginPath(); ctx.moveTo(i, 0); ctx.quadraticCurveTo(i-5, hs/2, i, hs); ctx.stroke();
+                        }
                         break;
                     case "sword":
-                        ctx.fillRect(-hs, -hs, this.size, this.size); ctx.strokeRect(-hs, -hs, this.size, this.size);
-                        ctx.fillStyle = '#bbb';
-                        ctx.beginPath(); ctx.moveTo(hs, -10); ctx.lineTo(hs+this.size, 0); ctx.lineTo(hs, 10); ctx.fill(); ctx.stroke();
+                    case "saw":
+                        ctx.beginPath();
+                        ctx.moveTo(hs, -hs/2); ctx.lineTo(-hs, -hs/2); ctx.lineTo(-hs, hs/2); ctx.lineTo(hs, hs/2); ctx.closePath();
+                        ctx.fill(); ctx.stroke();
+                        ctx.fillStyle = this.shape === "saw" ? '#8B4513' : '#bbb';
+                        ctx.beginPath(); ctx.moveTo(hs, -5); ctx.lineTo(hs+this.size, 0); ctx.lineTo(hs, 5); ctx.fill(); ctx.stroke();
+                        if (this.shape === "saw") {
+                            for(let i=hs+10; i<hs+this.size-5; i+=10) { ctx.moveTo(i, -5); ctx.lineTo(i, -10); ctx.moveTo(i, 5); ctx.lineTo(i, 10); ctx.stroke(); }
+                        }
                         break;
                     case "angler":
-                        ctx.fillRect(-hs, -hs, this.size, this.size); ctx.strokeRect(-hs, -hs, this.size, this.size);
-                        ctx.beginPath(); ctx.moveTo(0, -hs); ctx.quadraticCurveTo(hs, -hs-20, hs+20, -5); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(0, -hs); ctx.quadraticCurveTo(hs, -hs-25, hs+25, -10); ctx.stroke();
+                        ctx.fillStyle = 'white';
+                        for(let i=hs; i>0; i-=10) { ctx.beginPath(); ctx.moveTo(i, hs-10); ctx.lineTo(i-5, hs); ctx.lineTo(i-10, hs-10); ctx.fill(); }
                         break;
                     case "octo":
+                    case "kraken":
+                    case "lusca":
                         ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-                        for(let i=0; i<4; i++) {
-                            ctx.fillRect(hs-15, hs-10 + (i*8) - 15, 20, 6);
-                            ctx.fillRect(-hs-5, hs-10 + (i*8) - 15, 20, 6);
+                        let tentacles = this.shape === "octo" ? 6 : 8;
+                        let tLen = this.shape === "kraken" ? hs*1.5 : hs;
+                        for(let i=0; i<tentacles; i++) {
+                            let a = -Math.PI/2 + (i * Math.PI/(tentacles-1));
+                            ctx.save(); ctx.rotate(a);
+                            ctx.beginPath(); ctx.moveTo(hs, -5); ctx.quadraticCurveTo(hs+tLen/2, -15, hs+tLen, 0); 
+                            ctx.quadraticCurveTo(hs+tLen/2, 10, hs, 5); ctx.fill(); ctx.stroke();
+                            ctx.restore();
                         }
                         break;
                     case "orca":
-                        ctx.fillRect(-hs, -hs/1.5, this.size, this.size/1.5);
-                        ctx.fillStyle = 'white'; ctx.fillRect(0, -hs/1.5 + 5, 10, 10); ctx.fillRect(-hs+5, 0, 15, 5);
+                        ctx.beginPath(); ctx.moveTo(hs, 0); ctx.lineTo(hs/2, -hs/1.5); ctx.lineTo(-hs, -hs/1.5); ctx.lineTo(-hs, hs/1.5); ctx.lineTo(hs/2, hs/1.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+                        ctx.fillStyle = 'white'; 
+                        ctx.beginPath(); ctx.ellipse(hs/2, -hs/4, hs/4, hs/8, 0, 0, Math.PI*2); ctx.fill(); // Eye patch
+                        ctx.fillRect(-hs+10, hs/3, hs, hs/3); // Underbelly
+                        ctx.fillStyle = 'black';
+                        ctx.beginPath(); ctx.moveTo(-hs/4, -hs/1.5); ctx.lineTo(-hs/2, -hs*1.2); ctx.lineTo(-hs/1.2, -hs/1.5); ctx.fill(); ctx.stroke(); // Dorsal
                         break;
-                    case "long-rect":
-                        ctx.fillRect(-hs*1.5, -hs/2, this.size*1.5, this.size/2); ctx.strokeRect(-hs*1.5, -hs/2, this.size*1.5, this.size/2);
+                    case "hydra":
+                        ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                        for (let i=-2; i<=2; i++) {
+                            ctx.save();
+                            let hAngle = i * 0.4; ctx.rotate(hAngle);
+                            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(hs*1.5, 0); ctx.lineWidth = 15; ctx.stroke(); ctx.lineWidth = 2;
+                            ctx.beginPath(); ctx.arc(hs*1.5, 0, 20, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                            ctx.fillStyle = 'red'; ctx.fillRect(hs*1.5 + 10, -5, 5, 10);
+                            ctx.restore();
+                        }
+                        break;
+                    case "cthulhu":
+                        ctx.fillRect(-hs, -hs, this.size, this.size); ctx.strokeRect(-hs, -hs, this.size, this.size);
+                        // Wings
+                        ctx.fillStyle = 'rgba(0, 100, 50, 0.8)';
+                        ctx.beginPath(); ctx.moveTo(-hs/2, -hs); ctx.quadraticCurveTo(-hs, -hs*2, -hs*2, -hs*1.5); ctx.lineTo(-hs, -hs/2); ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(-hs/2, hs); ctx.quadraticCurveTo(-hs, hs*2, -hs*2, hs*1.5); ctx.lineTo(-hs, hs/2); ctx.fill(); ctx.stroke();
+                        // Face tentacles
+                        ctx.fillStyle = this.color;
+                        for(let i=-hs/2; i<=hs/2; i+=15) { ctx.beginPath(); ctx.moveTo(hs, i); ctx.quadraticCurveTo(hs*1.5, i+20, hs*1.2, i+40); ctx.stroke(); }
+                        break;
+                    case "scylla":
+                        ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                        for (let i=-1; i<=1; i++) {
+                            ctx.save(); ctx.rotate(i * 0.8);
+                            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(hs*1.2, 0); ctx.lineWidth = 10; ctx.stroke(); ctx.lineWidth = 2;
+                            ctx.beginPath(); ctx.arc(hs*1.2, 0, 15, 0, Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.stroke();
+                            ctx.restore();
+                        }
+                        break;
+                    case "turtle":
+                        ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                        // Flippers
+                        for(let i of [-1, 1]) {
+                            ctx.beginPath(); ctx.ellipse(0, i*(hs+10), hs/2, 20, 0, 0, Math.PI*2); ctx.fillStyle='#2F4F4F'; ctx.fill(); ctx.stroke();
+                        }
+                        ctx.beginPath(); ctx.arc(hs, 0, hs/2.5, 0, Math.PI*2); ctx.fill(); ctx.stroke(); // Head
                         break;
                     case "pod-3":
                     case "pod-5":
@@ -450,7 +511,11 @@
                             ctx.fillStyle = this.color; 
                         }
                         return;
-                    case "rect":
+                    case "serpent":
+                    case "siren":
+                    case "ningen":
+                    case "leviathan":
+                    case "bloop":
                     default:
                         ctx.fillRect(-hs, -hs, this.size, this.size); ctx.strokeRect(-hs, -hs, this.size, this.size);
                         break;
@@ -458,23 +523,23 @@
 
                 ctx.globalAlpha = 1.0; 
 
-                // Anglerfish glowing lure
                 if (isAngler) {
-                    ctx.beginPath(); ctx.arc(hs+20, -5, 8, 0, Math.PI*2); 
+                    ctx.beginPath(); ctx.arc(hs+25, -10, 8, 0, Math.PI*2); 
                     ctx.fillStyle = '#ffff00'; ctx.shadowBlur = 15; ctx.shadowColor = '#ffff00'; ctx.fill(); ctx.shadowBlur = 0;
                 }
 
-                // Eyes
-                ctx.fillStyle = 'white'; ctx.fillRect(this.size/4, -this.size/4, this.size/4, this.size/4);
-                ctx.fillStyle = 'black'; ctx.fillRect(this.size/4 + 2, -this.size/4 + 2, this.size/8, this.size/8);
+                if (this.shape !== 'hydra') {
+                    ctx.fillStyle = 'white'; ctx.fillRect(this.size/4, -this.size/4, this.size/4, this.size/4);
+                    ctx.fillStyle = 'black'; ctx.fillRect(this.size/4 + 2, -this.size/4 + 2, this.size/8, this.size/8);
+                }
             }
 
             drawEntity(ctx, isPlayer = false) {
                 ctx.save();
                 
-                // Jörmungandr trailing segments
-                if (this.animalName === 'Jörmungandr' && this.history.length > 0) {
-                    for (let i = 10; i < this.history.length; i+=25) {
+                if (['Jörmungandr', 'Sea Serpent', 'Oarfish', 'Leviathan'].includes(this.animalName) && this.history.length > 0) {
+                    let segStep = this.animalName === 'Oarfish' ? 15 : 25;
+                    for (let i = 10; i < this.history.length; i+=segStep) {
                         let seg = this.history[i];
                         let scale = Math.max(0.2, 1 - (i / 300));
                         let segSize = this.size * scale;
@@ -482,7 +547,7 @@
                         ctx.save();
                         ctx.translate(seg.x, seg.y);
                         ctx.rotate(seg.angle);
-                        ctx.fillStyle = (this.poisonTicks > 0) ? '#b3ffb3' : '#1d3333';
+                        ctx.fillStyle = (this.poisonTicks > 0) ? '#b3ffb3' : this.color;
                         ctx.fillRect(-segSize/2, -segSize/2, segSize, segSize);
                         ctx.strokeRect(-segSize/2, -segSize/2, segSize, segSize);
                         ctx.restore();
@@ -533,17 +598,15 @@
 
                 if (this.isBoosting && this.stamina >= 30) {
                     this.stamina -= 30;
-                    this.isBoostingFrames = 30; // Active frames for Swordfish damage bonus
+                    this.isBoostingFrames = 30; 
                     
-                    // Swordfish boosts faster
                     let isSword = this.animalName === 'Swordfish';
                     let boostMult = (isSword ? 35 : 20) + (this.size * 0.05); 
                     
                     this.vx += Math.cos(this.angle) * boostMult;
                     this.vy += Math.sin(this.angle) * boostMult;
 
-                    // Octopus/Squid ink cloud
-                    if (['Octopus', 'Giant Squid', 'Lusca', 'Kraken'].includes(this.animalName)) {
+                    if (['Octopus', 'Giant Squid', 'Lusca', 'Kraken', 'Cthulhu'].includes(this.animalName)) {
                         gameManager.inks.push(new InkCloud(this.x, this.y, this.size * 2));
                     }
                 }
@@ -578,15 +641,27 @@
             update(player, terrainList, gameManager) {
                 let inWater = this.y > WATER_LEVEL;
                 if (inWater) {
-                    let distToPlayer = Math.hypot(player.x - this.x, player.y - this.y);
-                    
-                    // Vision scales with size
                     let vision = 600 + this.size * 2; 
+                    let closestTarget = null;
+                    let closestDist = vision;
 
-                    if (distToPlayer < vision && player.hp > 0) {
-                        let angleToPlayer = Math.atan2(player.y - this.y, player.x - this.x);
-                        if (this.tier > player.tier) this.targetAngle = angleToPlayer; // Chase
-                        else if (this.tier < player.tier) this.targetAngle = angleToPlayer + Math.PI; // Flee
+                    // Check player
+                    if (player.hp > 0) {
+                        let d = Math.hypot(player.x - this.x, player.y - this.y);
+                        if (d < closestDist) { closestDist = d; closestTarget = player; }
+                    }
+
+                    // Check other enemies
+                    for (let other of gameManager.enemies) {
+                        if (other === this || other.hp <= 0) continue;
+                        let d = Math.hypot(other.x - this.x, other.y - this.y);
+                        if (d < closestDist) { closestDist = d; closestTarget = other; }
+                    }
+
+                    if (closestTarget) {
+                        let angleToTarget = Math.atan2(closestTarget.y - this.y, closestTarget.x - this.x);
+                        if (this.tier >= closestTarget.tier) this.targetAngle = angleToTarget; // Chase
+                        else this.targetAngle = angleToTarget + Math.PI; // Flee
                     } else {
                         this.changeDirTimer--;
                         if (this.changeDirTimer <= 0) {
@@ -635,11 +710,9 @@
                 window.addEventListener('mousemove', e => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; });
                 window.addEventListener('mousedown', () => { if (this.state === 'playing') this.player.isBoosting = true; });
                 
-                // Keyboard Setup (Steering & Boosting)
                 window.addEventListener('keydown', e => { 
                     if ((e.code === 'Space' || e.key === ' ') && this.state === 'playing') this.player.isBoosting = true; 
                     
-                    // Map WASD / Arrows to pseudo-mouse positions for mobile attached keyboards without mice
                     const kSpeed = 150;
                     if (['w', 'W', 'ArrowUp'].includes(e.key)) this.mouse.y = window.innerHeight / 2 - kSpeed;
                     if (['s', 'S', 'ArrowDown'].includes(e.key)) this.mouse.y = window.innerHeight / 2 + kSpeed;
@@ -647,7 +720,6 @@
                     if (['d', 'D', 'ArrowRight'].includes(e.key)) this.mouse.x = window.innerWidth / 2 + kSpeed;
                 });
 
-                // Touch & Mobile setup
                 window.addEventListener('touchstart', e => {
                     document.getElementById('mobile-boost-btn').style.display = 'block';
                     if (e.target.id !== 'mobile-boost-btn' && e.target.id !== 'fullscreen-btn') {
@@ -667,7 +739,6 @@
                     if (this.state === 'playing') this.player.isBoosting = true;
                 });
 
-                // Fullscreen toggle
                 document.getElementById('fullscreen-btn').addEventListener('click', () => {
                     if (!document.fullscreenElement) {
                         document.documentElement.requestFullscreen().catch(err => {
@@ -695,7 +766,7 @@
             }
 
             generateWorld() {
-                this.terrain.push(new Terrain(0, WORLD_HEIGHT - 500, WORLD_WIDTH, 500)); // Seabed
+                this.terrain.push(new Terrain(0, WORLD_HEIGHT - 500, WORLD_WIDTH, 500)); 
                 
                 for(let i=0; i<60; i++) {
                     let w = 300 + Math.random()*1000, h = 100 + Math.random()*200;
@@ -723,7 +794,7 @@
                 
                 let pTier = this.player ? this.player.tier : 1;
                 let minTier = Math.max(1, pTier - 2);
-                let maxTier = Math.min(20, pTier + 3); // Allow spawning slightly higher mythics
+                let maxTier = Math.min(20, pTier + 3); 
                 
                 let validAnimals = ANIMAL_NAMES.filter(name => ANIMALS[name].tier >= minTier && ANIMALS[name].tier <= maxTier);
                 let aName = validAnimals[Math.floor(Math.random() * validAnimals.length)];
@@ -731,7 +802,6 @@
                 this.enemies.push(new Enemy(x, y, aName));
             }
 
-            // --- UPDATED COMBAT LOGIC (Front Attacks Only) ---
             resolveCombat(e1, e2) {
                 let dx = e2.x - e1.x, dy = e2.y - e1.y;
                 let dist = Math.sqrt(dx*dx + dy*dy);
@@ -740,12 +810,10 @@
                 if (dist < minDist && e1.bumpCooldown <= 0 && e2.bumpCooldown <= 0 && e1.hp > 0 && e2.hp > 0) {
                     let nx = dx / (dist || 1), ny = dy / (dist || 1);
                     
-                    // Knockback scales slightly with size diff
                     let kb = 25; 
                     e1.vx -= nx * kb * (e2.size/e1.size); e1.vy -= ny * kb * (e2.size/e1.size);
                     e2.vx += nx * kb * (e1.size/e2.size); e2.vy += ny * kb * (e1.size/e2.size);
 
-                    // Determine if attacking from the front (within ~60 degrees / PI/3 radians of facing direction)
                     let angleToE2 = Math.atan2(dy, dx);
                     let angleToE1 = Math.atan2(-dy, -dx);
 
@@ -757,19 +825,15 @@
                     if (diff2 > Math.PI) diff2 = Math.PI * 2 - diff2;
                     let e2Front = diff2 < Math.PI / 3;
 
-                    // Only apply base damage if the entity is facing its opponent
                     let dmgToE2 = e1Front ? e1.damage : 0;
                     let dmgToE1 = e2Front ? e2.damage : 0;
 
-                    // Swordfish Ability: 3x damage when boosting
                     if (e1.animalName === 'Swordfish' && e1.isBoostingFrames > 0 && e1Front) dmgToE2 *= 3;
                     if (e2.animalName === 'Swordfish' && e2.isBoostingFrames > 0 && e2Front) dmgToE1 *= 3;
 
-                    // Pufferfish Ability: Reflect 50% damage (only triggers if taking damage)
                     if ((e2.animalName === 'Pufferfish' || e2.animalName === 'Hydra') && dmgToE2 > 0) dmgToE1 += dmgToE2 * 0.5;
                     if ((e1.animalName === 'Pufferfish' || e1.animalName === 'Hydra') && dmgToE1 > 0) dmgToE2 += dmgToE1 * 0.5;
                     
-                    // Jellyfish Ability: Poison (only applies if attacking from the front)
                     if ((e1.animalName === 'Jellyfish' || e1.animalName === 'Lusca') && e1Front) e2.poisonTicks = 150; 
                     if ((e2.animalName === 'Jellyfish' || e2.animalName === 'Lusca') && e2Front) e1.poisonTicks = 150;
 
@@ -777,7 +841,6 @@
                     e1.bumpCooldown = 20; e2.bumpCooldown = 20;
                 }
             }
-            // --- END UPDATED COMBAT LOGIC ---
 
             triggerEvolution() {
                 this.state = 'evolving';
@@ -860,7 +923,6 @@
                         enemy.update(this.player, this.terrain, this);
                         
                         if (enemy.hp <= 0) {
-                            // Massive meat drops for massive creatures
                             let meatValue = ANIMALS[enemy.animalName].nextXP ? ANIMALS[enemy.animalName].nextXP * 0.15 : 1000 * T;
                             if (enemy.tier === 1) meatValue = 50; 
                             
@@ -882,7 +944,6 @@
                     this.food = this.food.filter(f => f.active);
                     while (this.food.length < 3000) this.spawnFoodItem();
 
-                    // Update Inks
                     for(let i=this.inks.length-1; i>=0; i--) {
                         this.inks[i].life--;
                         if (this.inks[i].life <= 0) this.inks.splice(i, 1);
@@ -899,7 +960,6 @@
                     this.updateUI();
                 }
 
-                // Render
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 this.camera.apply(this.ctx, this.canvas);
                 
@@ -908,7 +968,6 @@
                 for (let f of this.food) f.draw(this.ctx);
                 for (let t of this.terrain) t.draw(this.ctx);
                 
-                // Depth sorting
                 let allEntities = [...this.enemies, this.player].filter(e => e.hp > 0);
                 allEntities.sort((a,b) => b.size - a.size);
                 
