@@ -731,6 +731,7 @@
                 this.enemies.push(new Enemy(x, y, aName));
             }
 
+            // --- UPDATED COMBAT LOGIC (Front Attacks Only) ---
             resolveCombat(e1, e2) {
                 let dx = e2.x - e1.x, dy = e2.y - e1.y;
                 let dist = Math.sqrt(dx*dx + dy*dy);
@@ -744,25 +745,39 @@
                     e1.vx -= nx * kb * (e2.size/e1.size); e1.vy -= ny * kb * (e2.size/e1.size);
                     e2.vx += nx * kb * (e1.size/e2.size); e2.vy += ny * kb * (e1.size/e2.size);
 
-                    let dmgToE2 = e1.damage;
-                    let dmgToE1 = e2.damage;
+                    // Determine if attacking from the front (within ~60 degrees / PI/3 radians of facing direction)
+                    let angleToE2 = Math.atan2(dy, dx);
+                    let angleToE1 = Math.atan2(-dy, -dx);
+
+                    let diff1 = Math.abs(angleToE2 - e1.angle) % (Math.PI * 2);
+                    if (diff1 > Math.PI) diff1 = Math.PI * 2 - diff1;
+                    let e1Front = diff1 < Math.PI / 3;
+
+                    let diff2 = Math.abs(angleToE1 - e2.angle) % (Math.PI * 2);
+                    if (diff2 > Math.PI) diff2 = Math.PI * 2 - diff2;
+                    let e2Front = diff2 < Math.PI / 3;
+
+                    // Only apply base damage if the entity is facing its opponent
+                    let dmgToE2 = e1Front ? e1.damage : 0;
+                    let dmgToE1 = e2Front ? e2.damage : 0;
 
                     // Swordfish Ability: 3x damage when boosting
-                    if (e1.animalName === 'Swordfish' && e1.isBoostingFrames > 0) dmgToE2 *= 3;
-                    if (e2.animalName === 'Swordfish' && e2.isBoostingFrames > 0) dmgToE1 *= 3;
+                    if (e1.animalName === 'Swordfish' && e1.isBoostingFrames > 0 && e1Front) dmgToE2 *= 3;
+                    if (e2.animalName === 'Swordfish' && e2.isBoostingFrames > 0 && e2Front) dmgToE1 *= 3;
 
-                    // Pufferfish Ability: Reflect 50% damage
-                    if (e2.animalName === 'Pufferfish' || e2.animalName === 'Hydra') dmgToE1 += dmgToE2 * 0.5;
-                    if (e1.animalName === 'Pufferfish' || e1.animalName === 'Hydra') dmgToE2 += dmgToE1 * 0.5;
+                    // Pufferfish Ability: Reflect 50% damage (only triggers if taking damage)
+                    if ((e2.animalName === 'Pufferfish' || e2.animalName === 'Hydra') && dmgToE2 > 0) dmgToE1 += dmgToE2 * 0.5;
+                    if ((e1.animalName === 'Pufferfish' || e1.animalName === 'Hydra') && dmgToE1 > 0) dmgToE2 += dmgToE1 * 0.5;
                     
-                    // Jellyfish Ability: Poison
-                    if (e1.animalName === 'Jellyfish' || e1.animalName === 'Lusca') e2.poisonTicks = 150; 
-                    if (e2.animalName === 'Jellyfish' || e2.animalName === 'Lusca') e1.poisonTicks = 150;
+                    // Jellyfish Ability: Poison (only applies if attacking from the front)
+                    if ((e1.animalName === 'Jellyfish' || e1.animalName === 'Lusca') && e1Front) e2.poisonTicks = 150; 
+                    if ((e2.animalName === 'Jellyfish' || e2.animalName === 'Lusca') && e2Front) e1.poisonTicks = 150;
 
                     e1.hp -= dmgToE1; e2.hp -= dmgToE2;
                     e1.bumpCooldown = 20; e2.bumpCooldown = 20;
                 }
             }
+            // --- END UPDATED COMBAT LOGIC ---
 
             triggerEvolution() {
                 this.state = 'evolving';
