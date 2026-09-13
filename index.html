@@ -118,10 +118,10 @@
         const B = 1000000000;
         const T = 1000000000000;
         
-        const WORLD_WIDTH = 30000;
-        const WORLD_HEIGHT = 20000;
-        const WATER_LEVEL = 2000;
-        const DEEP_LEVEL = 8000;
+        const WORLD_WIDTH = 150000;
+        const WORLD_HEIGHT = 100000;
+        const WATER_LEVEL = 10000;
+        const DEEP_LEVEL = 40000;
 
         const ANIMALS = {
             "Fish": { tier: 1, size: 30, color: "#ff6b6b", shape: "fish", nextXP: 500, evos: ["Jellyfish", "School of Fish", "Pufferfish"] },
@@ -219,6 +219,7 @@
         class Food {
             constructor(x, y, isMeat = false, xpValue = 10, radius = 5) {
                 this.x = x; this.y = y; this.isMeat = isMeat; this.active = true;
+                this.life = isMeat ? 1200 : Infinity;
                 
                 if (isMeat) {
                     this.type = 'meat';
@@ -358,7 +359,8 @@
 
                 if (['Jörmungandr', 'Sea Serpent', 'Oarfish', 'Leviathan'].includes(this.animalName)) {
                     this.history.unshift({x: this.x, y: this.y, angle: this.angle});
-                    if (this.history.length > 300) this.history.pop();
+                    let maxHist = Math.max(300, this.size * 2);
+                    if (this.history.length > maxHist) this.history.length = maxHist;
                 }
             }
 
@@ -538,10 +540,11 @@
                 ctx.save();
                 
                 if (['Jörmungandr', 'Sea Serpent', 'Oarfish', 'Leviathan'].includes(this.animalName) && this.history.length > 0) {
-                    let segStep = this.animalName === 'Oarfish' ? 15 : 25;
+                    let maxHist = Math.max(300, this.size * 2);
+                    let segStep = Math.max(15, Math.floor(this.size / 10));
                     for (let i = 10; i < this.history.length; i+=segStep) {
                         let seg = this.history[i];
-                        let scale = Math.max(0.2, 1 - (i / 300));
+                        let scale = Math.max(0.2, 1 - (i / maxHist));
                         let segSize = this.size * scale;
                         
                         ctx.save();
@@ -768,18 +771,18 @@
             generateWorld() {
                 this.terrain.push(new Terrain(0, WORLD_HEIGHT - 500, WORLD_WIDTH, 500)); 
                 
-                for(let i=0; i<60; i++) {
+                for(let i=0; i<300; i++) {
                     let w = 300 + Math.random()*1000, h = 100 + Math.random()*200;
-                    let x = Math.random()*(WORLD_WIDTH-w), y = WATER_LEVEL - 50 - Math.random()*800;
+                    let x = Math.random()*(WORLD_WIDTH-w), y = WATER_LEVEL - 50 - Math.random()*2000;
                     this.terrain.push(new Terrain(x, y, w, h, "island"));
                 }
-                for(let i=0; i<150; i++) {
+                for(let i=0; i<750; i++) {
                     let w = 200 + Math.random()*800, h = 200 + Math.random()*800;
                     let x = Math.random()*(WORLD_WIDTH-w), y = WATER_LEVEL + 500 + Math.random()*(WORLD_HEIGHT-WATER_LEVEL-1500);
                     this.terrain.push(new Terrain(x, y, w, h, "solid"));
                 }
-                for (let i = 0; i < 3000; i++) this.spawnFoodItem();
-                for (let i = 0; i < 100; i++) this.spawnEnemy();
+                for (let i = 0; i < 15000; i++) this.spawnFoodItem();
+                for (let i = 0; i < 500; i++) this.spawnEnemy();
             }
 
             spawnFoodItem(x, y, isMeat = false, xpValue = 10, radius = 5) {
@@ -939,10 +942,18 @@
                         }
                     }
 
-                    if (this.enemies.length < 100 && Math.random() < 0.1) this.spawnEnemy();
+                    if (this.enemies.length < 500 && Math.random() < 0.1) this.spawnEnemy();
 
-                    this.food = this.food.filter(f => f.active);
-                    while (this.food.length < 3000) this.spawnFoodItem();
+                    this.food = this.food.filter(f => {
+                        if (!f.active) return false;
+                        if (f.isMeat) {
+                            f.life--;
+                            if (f.life <= 0) return false;
+                        }
+                        return true;
+                    });
+                    
+                    while (this.food.length < 15000) this.spawnFoodItem();
 
                     for(let i=this.inks.length-1; i>=0; i--) {
                         this.inks[i].life--;
