@@ -405,18 +405,18 @@
                         ctx.moveTo(hs, 0); ctx.lineTo(-hs, -hs/1.2); ctx.lineTo(-hs, hs/1.2); ctx.closePath();
                         ctx.fill(); ctx.stroke();
                         ctx.beginPath(); ctx.moveTo(-hs, 0); ctx.lineTo(-hs*1.5, -hs/1.5); ctx.lineTo(-hs*1.5, hs/1.5); ctx.closePath();
-                        ctx.fillStyle = this.color; ctx.fill(); ctx.stroke(); // tail
+                        ctx.fillStyle = this.color; ctx.fill(); ctx.stroke(); 
                         break;
                     case "shark":
                         ctx.beginPath();
                         ctx.moveTo(hs, 0); ctx.lineTo(hs/2, -hs/2); ctx.lineTo(-hs, -hs/1.5); ctx.lineTo(-hs, hs/1.5); ctx.lineTo(hs/2, hs/2); ctx.closePath();
                         ctx.fill(); ctx.stroke();
-                        ctx.beginPath(); ctx.moveTo(-hs/2, -hs/2); ctx.lineTo(-hs, -hs*1.2); ctx.lineTo(-hs/1.5, -hs/2); ctx.fill(); ctx.stroke(); // Dorsal
-                        ctx.beginPath(); ctx.moveTo(-hs, 0); ctx.lineTo(-hs*1.5, -hs); ctx.lineTo(-hs*1.2, 0); ctx.lineTo(-hs*1.5, hs); ctx.closePath(); ctx.fill(); ctx.stroke(); // Tail
+                        ctx.beginPath(); ctx.moveTo(-hs/2, -hs/2); ctx.lineTo(-hs, -hs*1.2); ctx.lineTo(-hs/1.5, -hs/2); ctx.fill(); ctx.stroke(); 
+                        ctx.beginPath(); ctx.moveTo(-hs, 0); ctx.lineTo(-hs*1.5, -hs); ctx.lineTo(-hs*1.2, 0); ctx.lineTo(-hs*1.5, hs); ctx.closePath(); ctx.fill(); ctx.stroke(); 
                         break;
                     case "whale":
                         ctx.fillRect(-hs, -hs/1.2, this.size, this.size/1.2); ctx.strokeRect(-hs, -hs/1.2, this.size, this.size/1.2);
-                        ctx.beginPath(); ctx.moveTo(-hs, 0); ctx.lineTo(-hs*1.5, -hs/1.5); ctx.lineTo(-hs*1.5, hs/1.5); ctx.closePath(); ctx.fill(); ctx.stroke(); // Flukes
+                        ctx.beginPath(); ctx.moveTo(-hs, 0); ctx.lineTo(-hs*1.5, -hs/1.5); ctx.lineTo(-hs*1.5, hs/1.5); ctx.closePath(); ctx.fill(); ctx.stroke(); 
                         break;
                     case "puffer":
                         ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
@@ -465,10 +465,10 @@
                     case "orca":
                         ctx.beginPath(); ctx.moveTo(hs, 0); ctx.lineTo(hs/2, -hs/1.5); ctx.lineTo(-hs, -hs/1.5); ctx.lineTo(-hs, hs/1.5); ctx.lineTo(hs/2, hs/1.5); ctx.closePath(); ctx.fill(); ctx.stroke();
                         ctx.fillStyle = 'white'; 
-                        ctx.beginPath(); ctx.ellipse(hs/2, -hs/4, hs/4, hs/8, 0, 0, Math.PI*2); ctx.fill(); // Eye patch
-                        ctx.fillRect(-hs+10, hs/3, hs, hs/3); // Underbelly
+                        ctx.beginPath(); ctx.ellipse(hs/2, -hs/4, hs/4, hs/8, 0, 0, Math.PI*2); ctx.fill(); 
+                        ctx.fillRect(-hs+10, hs/3, hs, hs/3); 
                         ctx.fillStyle = 'black';
-                        ctx.beginPath(); ctx.moveTo(-hs/4, -hs/1.5); ctx.lineTo(-hs/2, -hs*1.2); ctx.lineTo(-hs/1.2, -hs/1.5); ctx.fill(); ctx.stroke(); // Dorsal
+                        ctx.beginPath(); ctx.moveTo(-hs/4, -hs/1.5); ctx.lineTo(-hs/2, -hs*1.2); ctx.lineTo(-hs/1.2, -hs/1.5); ctx.fill(); ctx.stroke(); 
                         break;
                     case "hydra":
                         ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
@@ -483,11 +483,11 @@
                         break;
                     case "cthulhu":
                         ctx.fillRect(-hs, -hs, this.size, this.size); ctx.strokeRect(-hs, -hs, this.size, this.size);
-                        // Wings
+                        
                         ctx.fillStyle = 'rgba(0, 100, 50, 0.8)';
                         ctx.beginPath(); ctx.moveTo(-hs/2, -hs); ctx.quadraticCurveTo(-hs, -hs*2, -hs*2, -hs*1.5); ctx.lineTo(-hs, -hs/2); ctx.fill(); ctx.stroke();
                         ctx.beginPath(); ctx.moveTo(-hs/2, hs); ctx.quadraticCurveTo(-hs, hs*2, -hs*2, hs*1.5); ctx.lineTo(-hs, hs/2); ctx.fill(); ctx.stroke();
-                        // Face tentacles
+                        
                         ctx.fillStyle = this.color;
                         for(let i=-hs/2; i<=hs/2; i+=15) { ctx.beginPath(); ctx.moveTo(hs, i); ctx.quadraticCurveTo(hs*1.5, i+20, hs*1.2, i+40); ctx.stroke(); }
                         break;
@@ -502,11 +502,11 @@
                         break;
                     case "turtle":
                         ctx.beginPath(); ctx.arc(0, 0, hs, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-                        // Flippers
+                        
                         for(let i of [-1, 1]) {
                             ctx.beginPath(); ctx.ellipse(0, i*(hs+10), hs/2, 20, 0, 0, Math.PI*2); ctx.fillStyle='#2F4F4F'; ctx.fill(); ctx.stroke();
                         }
-                        ctx.beginPath(); ctx.arc(hs, 0, hs/2.5, 0, Math.PI*2); ctx.fill(); ctx.stroke(); // Head
+                        ctx.beginPath(); ctx.arc(hs, 0, hs/2.5, 0, Math.PI*2); ctx.fill(); ctx.stroke(); 
                         break;
                     case "pod-3":
                     case "pod-5":
@@ -669,8 +669,8 @@
 
                     if (closestTarget) {
                         let angleToTarget = Math.atan2(closestTarget.y - this.y, closestTarget.x - this.x);
-                        if (this.tier >= closestTarget.tier) this.targetAngle = angleToTarget; // Chase
-                        else this.targetAngle = angleToTarget + Math.PI; // Flee
+                        if (this.tier >= closestTarget.tier) this.targetAngle = angleToTarget; 
+                        else this.targetAngle = angleToTarget + Math.PI; 
                     } else {
                         this.changeDirTimer--;
                         if (this.changeDirTimer <= 0) {
@@ -732,7 +732,6 @@
                     if (['a', 'A', 'ArrowLeft'].includes(e.key)) this.mouse.x = window.innerWidth / 2 - kSpeed;
                     if (['d', 'D', 'ArrowRight'].includes(e.key)) this.mouse.x = window.innerWidth / 2 + kSpeed;
 
-                    // CHEAT CODE TRACKER
                     if (e.key.length === 1) {
                         this.cheatString += e.key.toUpperCase();
                         if (this.cheatString.length > this.cheatCode.length) {
@@ -748,7 +747,7 @@
                             let alertBox = document.getElementById('cheat-alert');
                             alertBox.style.display = 'block';
                             setTimeout(() => { alertBox.style.display = 'none'; }, 3000);
-                            this.cheatString = ""; // Reset
+                            this.cheatString = ""; 
                         }
                     }
                 });
@@ -813,8 +812,8 @@
                 }
                 for (let i = 0; i < 15000; i++) this.spawnFoodItem();
                 
-                // Spawn 4x the amount of enemies initially (2000 instead of 500)
-                for (let i = 0; i < 2000; i++) this.spawnEnemy();
+                // Spawn 1250 enemies initially
+                for (let i = 0; i < 1250; i++) this.spawnEnemy();
             }
 
             spawnFoodItem(x, y, isMeat = false, xpValue = 10, radius = 5) {
@@ -891,7 +890,6 @@
                     `;
                     card.onclick = () => {
                         this.player.setAnimal(evoName);
-                        // If they used the cheat code, ensure they retain OP health
                         if (this.player.maxHp > 9000000) {
                             this.player.hp = this.player.maxHp;
                             this.player.damage = 999999;
@@ -979,8 +977,8 @@
                         }
                     }
 
-                    // Keep enemy count high (2000)
-                    if (this.enemies.length < 2000 && Math.random() < 0.2) this.spawnEnemy();
+                    // Keep enemy count steady at 1250
+                    if (this.enemies.length < 1250 && Math.random() < 0.2) this.spawnEnemy();
 
                     this.food = this.food.filter(f => {
                         if (!f.active) return false;
