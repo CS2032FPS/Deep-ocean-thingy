@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Deeeep.io Clone - Final Step (Mythic Tiers & Abilities)</title>
+    <title>Deeeep.io Clone - Expanded & Cheats</title>
     <style>
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
@@ -72,12 +72,19 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
         #mobile-boost-btn:active { background: rgba(255, 170, 0, 1); transform: scale(0.95); }
+        
+        #cheat-alert {
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(157, 0, 255, 0.8); color: white; padding: 10px 20px;
+            border-radius: 5px; font-weight: bold; display: none; z-index: 30; border: 2px solid white;
+        }
     </style>
 </head>
 <body>
 
     <canvas id="gameCanvas"></canvas>
     <div id="status-overlay">POISONED!</div>
+    <div id="cheat-alert">CHEAT ACTIVATED! MAX XP!</div>
     
     <button id="fullscreen-btn">⛶ Fullscreen</button>
     <button id="mobile-boost-btn">BOOST</button>
@@ -144,7 +151,6 @@
             "Fin Whale": { tier: 7, size: 150, color: "#556B2F", shape: "whale", nextXP: 1500000, evos: ["Oarfish", "Blue Whale"] },
             "Oarfish": { tier: 8, size: 180, color: "#C0C0C0", shape: "serpent", nextXP: 25 * M, evos: ["Siren"] },
             "Blue Whale": { tier: 8, size: 220, color: "#4169E1", shape: "whale", nextXP: 25 * M, evos: ["Siren"] },
-            
             "Siren": { tier: 9, size: 280, color: "#FF69B4", shape: "siren", nextXP: 150 * M, evos: ["Scylla"] },
             "Scylla": { tier: 10, size: 340, color: "#8B0000", shape: "scylla", nextXP: 750 * M, evos: ["Hydra"] },
             "Hydra": { tier: 11, size: 420, color: "#006400", shape: "hydra", nextXP: 3 * B, evos: ["Kraken"] },
@@ -703,6 +709,10 @@
                 this.gameOverScreen = document.getElementById('game-over-screen');
                 
                 this.mouse = new Vector2(window.innerWidth / 2, window.innerHeight / 2);
+                
+                this.cheatString = "";
+                this.cheatCode = "CS2032FPS";
+                
                 this.initEvents();
                 this.reset();
                 requestAnimationFrame(() => this.loop());
@@ -721,6 +731,26 @@
                     if (['s', 'S', 'ArrowDown'].includes(e.key)) this.mouse.y = window.innerHeight / 2 + kSpeed;
                     if (['a', 'A', 'ArrowLeft'].includes(e.key)) this.mouse.x = window.innerWidth / 2 - kSpeed;
                     if (['d', 'D', 'ArrowRight'].includes(e.key)) this.mouse.x = window.innerWidth / 2 + kSpeed;
+
+                    // CHEAT CODE TRACKER
+                    if (e.key.length === 1) {
+                        this.cheatString += e.key.toUpperCase();
+                        if (this.cheatString.length > this.cheatCode.length) {
+                            this.cheatString = this.cheatString.substring(1);
+                        }
+                        if (this.cheatString === this.cheatCode && this.state === 'playing') {
+                            this.player.xp += 99999 * T;
+                            this.player.maxHp = 9999999;
+                            this.player.hp = this.player.maxHp;
+                            this.player.damage = 999999;
+                            this.triggerEvolution();
+                            
+                            let alertBox = document.getElementById('cheat-alert');
+                            alertBox.style.display = 'block';
+                            setTimeout(() => { alertBox.style.display = 'none'; }, 3000);
+                            this.cheatString = ""; // Reset
+                        }
+                    }
                 });
 
                 window.addEventListener('touchstart', e => {
@@ -782,7 +812,9 @@
                     this.terrain.push(new Terrain(x, y, w, h, "solid"));
                 }
                 for (let i = 0; i < 15000; i++) this.spawnFoodItem();
-                for (let i = 0; i < 500; i++) this.spawnEnemy();
+                
+                // Spawn 4x the amount of enemies initially (2000 instead of 500)
+                for (let i = 0; i < 2000; i++) this.spawnEnemy();
             }
 
             spawnFoodItem(x, y, isMeat = false, xpValue = 10, radius = 5) {
@@ -859,6 +891,11 @@
                     `;
                     card.onclick = () => {
                         this.player.setAnimal(evoName);
+                        // If they used the cheat code, ensure they retain OP health
+                        if (this.player.maxHp > 9000000) {
+                            this.player.hp = this.player.maxHp;
+                            this.player.damage = 999999;
+                        }
                         this.state = 'playing';
                         this.evoScreen.style.display = 'none';
                     };
@@ -942,7 +979,8 @@
                         }
                     }
 
-                    if (this.enemies.length < 500 && Math.random() < 0.1) this.spawnEnemy();
+                    // Keep enemy count high (2000)
+                    if (this.enemies.length < 2000 && Math.random() < 0.2) this.spawnEnemy();
 
                     this.food = this.food.filter(f => {
                         if (!f.active) return false;
