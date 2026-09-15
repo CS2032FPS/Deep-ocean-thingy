@@ -812,8 +812,8 @@
                 }
                 for (let i = 0; i < 15000; i++) this.spawnFoodItem();
                 
-                // Spawn 1250 enemies initially
-                for (let i = 0; i < 1250; i++) this.spawnEnemy();
+                // Spawn 850 enemies initially
+                for (let i = 0; i < 850; i++) this.spawnEnemy();
             }
 
             spawnFoodItem(x, y, isMeat = false, xpValue = 10, radius = 5) {
@@ -977,8 +977,8 @@
                         }
                     }
 
-                    // Keep enemy count steady at 1250
-                    if (this.enemies.length < 1250 && Math.random() < 0.2) this.spawnEnemy();
+                    // Keep enemy count steady at 850
+                    if (this.enemies.length < 850 && Math.random() < 0.2) this.spawnEnemy();
 
                     this.food = this.food.filter(f => {
                         if (!f.active) return false;
